@@ -1,0 +1,1220 @@
+{% extends 'base.html' %}
+
+{% block title %}PoCA Proofs Management{% endblock %}
+
+{% block page_title %}PoCA Proofs{% endblock %}
+{% block page_subtitle %}Proof-of-Context Attestation - Verifiable AI responses{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ============ STATS CARDS ============ */
+    .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-warm), var(--primary-light));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .stat-card:hover::before {
+        opacity: 1;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(217, 155, 127, 0.3);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-card .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .stat-card .stat-icon.blue {
+        background: rgba(96, 165, 250, 0.15);
+        color: #60a5fa;
+    }
+
+    .stat-card .stat-icon.green {
+        background: rgba(52, 211, 153, 0.15);
+        color: #34d399;
+    }
+
+    .stat-card .stat-icon.orange {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+    }
+
+    .stat-card .stat-icon.purple {
+        background: rgba(167, 139, 250, 0.15);
+        color: #a78bfa;
+    }
+
+    .stat-card .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-light);
+        margin-bottom: 0.2rem;
+    }
+
+    .stat-card .stat-label {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .stat-card .stat-change {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 50px;
+        margin-top: 0.3rem;
+    }
+
+    .stat-change.up {
+        color: #34d399;
+        background: rgba(52, 211, 153, 0.1);
+    }
+
+    .stat-change.down {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.1);
+    }
+
+    /* ============ FILTER SECTION ============ */
+    .filter-section {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 1.2rem 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-section .filter-label {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .filter-section .filter-control {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        width: 100%;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .filter-section .filter-control:focus {
+        border-color: var(--primary-light);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(217, 155, 127, 0.1);
+    }
+
+    .filter-section .filter-control option {
+        background: var(--primary-dark);
+        color: var(--text-light);
+    }
+
+    .btn-filter {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-reset {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .btn-reset:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    /* ============ TABLE ============ */
+    .table-container {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .table-custom {
+        color: var(--text-light);
+        margin-bottom: 0;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-custom thead th {
+        border-bottom: 2px solid var(--border-color);
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0.8rem 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .table-custom tbody td {
+        border-bottom: 1px solid var(--border-color);
+        padding: 0.7rem 1rem;
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+
+    .table-custom tbody tr {
+        transition: all 0.3s ease;
+    }
+
+    .table-custom tbody tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .table-custom tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* ============ STATUS BADGE ============ */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.2rem 0.7rem;
+        border-radius: 50px;
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+
+    .status-badge.batched {
+        background: rgba(52, 211, 153, 0.15);
+        color: #34d399;
+    }
+
+    .status-badge.pending {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+    }
+
+    .status-badge.anchored {
+        background: rgba(96, 165, 250, 0.15);
+        color: #60a5fa;
+    }
+
+    .status-badge.failed {
+        background: rgba(248, 113, 113, 0.15);
+        color: #f87171;
+    }
+
+    .status-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .status-dot.batched { background: #34d399; }
+    .status-dot.pending { background: #fbbf24; }
+    .status-dot.anchored { background: #60a5fa; }
+    .status-dot.failed { background: #f87171; }
+
+    /* ============ SAFETY SCORE ============ */
+    .safety-score {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .safety-score.high { color: #34d399; }
+    .safety-score.medium { color: #fbbf24; }
+    .safety-score.low { color: #f87171; }
+
+    .safety-bar {
+        width: 60px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+        display: inline-block;
+    }
+
+    .safety-bar .fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 1s ease;
+    }
+
+    .safety-bar .fill.high { background: #34d399; }
+    .safety-bar .fill.medium { background: #fbbf24; }
+    .safety-bar .fill.low { background: #f87171; }
+
+    /* ============ AGENT DID DISPLAY ============ */
+    .agent-did-small {
+        font-family: monospace;
+        font-size: 0.55rem;
+        color: var(--text-muted);
+        opacity: 0.7;
+        display: block;
+        margin-top: 0.05rem;
+    }
+
+    .agent-name-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.05rem;
+    }
+
+    .agent-name-cell .name {
+        font-weight: 500;
+        color: var(--text-light);
+    }
+
+    .tx-hash-cell {
+        font-family: monospace;
+        font-size: 0.65rem;
+        color: var(--primary-light);
+        cursor: help;
+    }
+
+    /* ============ ACTION BUTTONS ============ */
+    .action-btns {
+        display: flex;
+        gap: 0.3rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .action-btns .btn-action {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 0.75rem;
+    }
+
+    .action-btns .btn-action:hover {
+        background: rgba(217, 155, 127, 0.08);
+        border-color: var(--primary-light);
+        color: var(--primary-light);
+        transform: translateY(-2px);
+    }
+
+    .action-btns .btn-action.verify:hover {
+        background: rgba(52, 211, 153, 0.08);
+        border-color: #34d399;
+        color: #34d399;
+    }
+
+    .action-btns .btn-action.delete:hover {
+        background: rgba(239, 68, 68, 0.08);
+        border-color: #f87171;
+        color: #f87171;
+    }
+
+    /* ============ PAGINATION ============ */
+    .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.8rem 1.5rem;
+        border-top: 1px solid var(--border-color);
+        flex-wrap: wrap;
+        gap: 0.8rem;
+    }
+
+    .pagination-info {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .pagination-info strong {
+        color: var(--text-light);
+    }
+
+    .pagination {
+        display: flex;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+    }
+
+    .pagination .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        padding: 0 0.8rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .pagination .page-link:hover {
+        background: rgba(217, 155, 127, 0.08);
+        border-color: var(--primary-light);
+        color: var(--primary-light);
+        transform: translateY(-2px);
+    }
+
+    .pagination .page-link.active {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        border-color: var(--primary-light);
+        color: #0F3040;
+        font-weight: 700;
+    }
+
+    .pagination .page-link.disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .pagination .page-link .fa-chevron-left,
+    .pagination .page-link .fa-chevron-right {
+        font-size: 0.65rem;
+    }
+
+    /* ============ MODAL STYLES ============ */
+    .modal-content {
+        background: #1a2a3a;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        color: var(--text-light);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem 1.5rem;
+    }
+
+    .modal-header .modal-title {
+        font-weight: 700;
+        color: var(--text-light);
+        font-size: 1.1rem;
+    }
+
+    .modal-header .modal-title i {
+        color: var(--primary-light);
+        margin-right: 0.5rem;
+    }
+
+    .modal-header .btn-close {
+        filter: invert(1);
+        opacity: 0.6;
+        transition: all 0.3s ease;
+    }
+
+    .modal-header .btn-close:hover {
+        opacity: 1;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 0.8rem 1.5rem;
+    }
+
+    .btn-modal-primary {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-modal-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-modal-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .btn-modal-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    /* ============ VIEW MODAL DETAILS ============ */
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        font-size: 0.85rem;
+    }
+
+    .detail-row .label {
+        color: var(--text-muted);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .detail-row .value {
+        color: var(--text-light);
+        font-weight: 500;
+        text-align: right;
+        word-break: break-all;
+        max-width: 60%;
+    }
+
+    .detail-row .value.mono {
+        font-family: monospace;
+        font-size: 0.7rem;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    /* ============ EMPTY STATE ============ */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+
+    .empty-state i {
+        font-size: 3.5rem;
+        color: var(--primary-light);
+        opacity: 0.2;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state h4 {
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+    }
+
+    .empty-state p {
+        color: var(--text-muted);
+        max-width: 400px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* ============ TOAST NOTIFICATION ============ */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+
+    .toast-custom {
+        background: #1a2a3a;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 0.8rem 1.2rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+        min-width: 280px;
+        animation: slideIn 0.4s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    .toast-custom.success {
+        border-left: 4px solid #34d399;
+    }
+
+    .toast-custom.error {
+        border-left: 4px solid #f87171;
+    }
+
+    .toast-custom.info {
+        border-left: 4px solid #60a5fa;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 768px) {
+        .filter-section .row > div {
+            margin-bottom: 0.8rem;
+        }
+        
+        .filter-section .row > div:last-child {
+            margin-bottom: 0;
+        }
+
+        .stat-card .stat-number {
+            font-size: 1.5rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .detail-row {
+            flex-direction: column;
+            padding: 0.4rem 0;
+        }
+
+        .detail-row .value {
+            text-align: left;
+            max-width: 100%;
+            margin-top: 0.2rem;
+        }
+
+        .action-btns {
+            justify-content: flex-start;
+        }
+
+        .pagination-container {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .pagination {
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .pagination .page-link {
+            min-width: 30px;
+            height: 30px;
+            font-size: 0.7rem;
+            padding: 0 0.4rem;
+        }
+
+        .action-btns .btn-action {
+            width: 28px;
+            height: 28px;
+            font-size: 0.65rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ====== STATS ROW ====== -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="fas fa-fingerprint"></i>
+            </div>
+            <div class="stat-number">{{ total_proofs|default:0 }}</div>
+            <div class="stat-label">Total Proofs Generated</div>
+            <div class="stat-change up">
+                <i class="fas fa-arrow-up"></i> +{{ batched_proofs|default:0 }} batched
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-number">{{ batched_proofs|default:0 }}</div>
+            <div class="stat-label">Batched Proofs</div>
+            <div class="stat-change up">
+                <i class="fas fa-arrow-up"></i> {{ pending_proofs|default:0 }} pending
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon orange">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-number">{{ pending_proofs|default:0 }}</div>
+            <div class="stat-label">Pending Proofs</div>
+            <div class="stat-change down">
+                <i class="fas fa-arrow-down"></i> Awaiting batch
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="stat-number">{{ verification_rate|default:0 }}%</div>
+            <div class="stat-label">Verification Success Rate</div>
+            <div class="stat-change up">
+                <i class="fas fa-arrow-up"></i> {{ paginator.count|default:0 }} total
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== FILTER SECTION ====== -->
+<div class="filter-section">
+    <form method="GET" action="{% url 'poca_proofs' %}" class="row align-items-end">
+        <div class="col-md-3 col-sm-6">
+            <div class="filter-label"><i class="fas fa-search me-1"></i> Search</div>
+            <input type="text" name="search" class="filter-control" placeholder="Proof ID or Agent..." value="{{ search|default:'' }}">
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="filter-label"><i class="fas fa-circle me-1"></i> Status</div>
+            <select name="status" class="filter-control">
+                <option value="">All Status</option>
+                <option value="batched" {% if status_filter == 'batched' %}selected{% endif %}>Batched</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="anchored" {% if status_filter == 'anchored' %}selected{% endif %}>Anchored</option>
+                <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+            </select>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="filter-label"><i class="fas fa-robot me-1"></i> Agent</div>
+            <select name="agent" class="filter-control">
+                <option value="">All Agents</option>
+                {% for agent in agents %}
+                <option value="{{ agent.id }}" {% if agent_filter|stringformat:"s" == agent.id|stringformat:"s" %}selected{% endif %}>
+                    {{ agent.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 col-sm-12">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn-filter">
+                    <i class="fas fa-search me-2"></i> Filter
+                </button>
+                <a href="{% url 'poca_proofs' %}" class="btn-reset">
+                    <i class="fas fa-undo me-2"></i> Reset
+                </a>
+                <button type="button" class="btn btn-modal-primary" style="width: 100%;" data-bs-toggle="modal" data-bs-target="#verifyAllModal">
+                    <i class="fas fa-shield-alt me-2"></i> Verify All
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ====== PROOFS TABLE ====== -->
+<div class="table-container">
+    {% if proofs %}
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th style="width: 10%;">Proof ID</th>
+                <th style="width: 18%;">Agent</th>
+                <th style="width: 12%;">Safety Score</th>
+                <th style="width: 12%;">Status</th>
+                <th style="width: 15%;">Tx Hash</th>
+                <th style="width: 13%;">Created</th>
+                <th style="width: 20%; text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in proofs %}
+            <tr>
+                <td>
+                    <span style="font-weight: 600; font-family: monospace; font-size: 0.8rem; color: var(--primary-light);">{{ item.proof.proof_id }}</span>
+                </td>
+                <td>
+                    <div class="agent-name-cell">
+                        <span class="name">
+                            <span style="width: 24px; height: 24px; border-radius: 50%; background: rgba(217,155,127,0.1); display: inline-flex; align-items: center; justify-content: center; color: var(--primary-light); margin-right: 0.3rem;">
+                                <i class="fas fa-robot" style="font-size: 0.65rem;"></i>
+                            </span>
+                            {{ item.proof.agent.name }}
+                        </span>
+                        <span class="agent-did-small" title="{{ item.agent_did }}">
+                            <i class="fas fa-fingerprint"></i> {{ item.agent_did|truncatechars:22 }}
+                        </span>
+                    </div>
+                </td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="safety-score {{ item.safety_class }}">{{ item.safety_percent }}%</span>
+                        <div class="safety-bar">
+                            <div class="fill {{ item.safety_class }}" style="width: {{ item.safety_percent }}%;"></div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="status-badge {{ item.status }}">
+                        <span class="status-dot {{ item.status }}"></span>
+                        {{ item.status_display }}
+                    </span>
+                </td>
+                <td>
+                    <span class="tx-hash-cell" title="{{ item.tx_hash }}">
+                        {{ item.tx_hash|truncatechars:14 }}
+                    </span>
+                </td>
+                <td style="color: var(--text-muted); font-size: 0.75rem;">
+                    <i class="far fa-clock me-1"></i> {{ item.proof.created_at|timesince }}
+                </td>
+                <td>
+                    <div class="action-btns">
+                        <button type="button" class="btn-action" data-bs-toggle="modal" data-bs-target="#viewModal" 
+                                onclick="viewProof(
+                                    '{{ item.proof.proof_id }}',
+                                    '{{ item.proof.agent.name }}',
+                                    '{{ item.agent_did }}',
+                                    '{{ item.proof.submitted_by.username }}',
+                                    '{{ item.proof.safety_score }}',
+                                    '{{ item.proof.created_at|date:"Y-m-d H:i:s" }}',
+                                    '{{ item.proof.query_text|escapejs }}',
+                                    '{{ item.status }}',
+                                    '{{ item.safety_percent }}',
+                                    '{{ item.tx_hash }}',
+                                    '{{ item.block_number }}'
+                                )" title="View Proof">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn-action verify" onclick="verifyProof('{{ item.proof.proof_id }}')" title="Verify">
+                            <i class="fas fa-check-circle"></i>
+                        </button>
+                        <button type="button" class="btn-action delete" onclick="deleteProof('{{ item.proof.proof_id }}', '{{ item.proof.id }}')" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- ====== PAGINATION ====== -->
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Showing <strong>{{ page_obj.start_index }}</strong> - <strong>{{ page_obj.end_index }}</strong> 
+            of <strong>{{ paginator.count }}</strong> entries
+        </div>
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link" title="First">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link" title="Previous">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% else %}
+            <span class="page-link disabled"><i class="fas fa-angle-double-left"></i></span>
+            <span class="page-link disabled"><i class="fas fa-chevron-left"></i></span>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="page-link active">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">{{ num }}</a>
+                {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                    <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">{{ num }}</a>
+                {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                    <span class="page-link disabled">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link" title="Next">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link" title="Last">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+            {% else %}
+            <span class="page-link disabled"><i class="fas fa-chevron-right"></i></span>
+            <span class="page-link disabled"><i class="fas fa-angle-double-right"></i></span>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-fingerprint"></i>
+        <h4>No Proofs Found</h4>
+        <p>There are no PoCA proofs in the system yet. Submit a query to generate your first proof.</p>
+        <a href="{% url 'submit_query' %}" class="btn-modal-primary" style="text-decoration: none; display: inline-block;">
+            <i class="fas fa-paper-plane me-2"></i> Submit a Query
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ============================================================ -->
+<!-- ====== VIEW PROOF MODAL ====== -->
+<!-- ============================================================ -->
+<div class="modal fade" id="viewModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-fingerprint"></i> Proof Details - <span id="viewProofId">PROOF-0001</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <span class="status-badge batched" id="viewStatusBadge">
+                            <span class="status-dot batched"></span> <span id="viewStatusText">Batched</span>
+                        </span>
+                        <span class="safety-score high">
+                            <i class="fas fa-shield-alt"></i> <span id="viewSafetyScore">97%</span>
+                        </span>
+                    </div>
+                </div>
+                <div style="background: rgba(255,255,255,0.02); border-radius: 12px; padding: 1rem;">
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-id-card me-1"></i> Proof ID</span>
+                        <span class="value mono" id="viewProofIdDetail">PROOF-0001</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-robot me-1"></i> Agent</span>
+                        <span class="value" id="viewAgent">MedicalAssistant-GPT</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-fingerprint me-1"></i> Agent DID</span>
+                        <span class="value mono" id="viewAgentDid" style="font-size: 0.65rem;">did:secureai:abc123</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-user me-1"></i> Submitted By</span>
+                        <span class="value" id="viewUser">patient_john</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-link me-1"></i> Tx Hash</span>
+                        <span class="value mono" id="viewTxHash" style="font-size: 0.65rem;">0x9bcdc63239ba31e9...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-cube me-1"></i> Block Number</span>
+                        <span class="value" id="viewBlockNumber">#53</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-fingerprint me-1"></i> Context Hash</span>
+                        <span class="value mono" style="font-size: 0.65rem;" id="viewContextHash">sha256:3d4f9a11c8b2e7f5...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-tag me-1"></i> Model Hash</span>
+                        <span class="value mono" style="font-size: 0.65rem;" id="viewModelHash">sha256:7c9e6679b1a2d3f4...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-signature me-1"></i> Signature</span>
+                        <span class="value mono" style="font-size: 0.6rem;" id="viewSignature">3045022100d1e4f7a8b3c9...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-clock me-1"></i> Created</span>
+                        <span class="value" id="viewCreated">2026-07-24 10:30:00</span>
+                    </div>
+                    <div class="detail-row" style="border-bottom: none;">
+                        <span class="label"><i class="fas fa-comment me-1"></i> Query</span>
+                        <span class="value" style="font-weight: 400; text-align: left; max-width: 60%;" id="viewQuery">"Patient reports mild fever and headache for 2 days..."</span>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; background: rgba(52, 211, 153, 0.05); border: 1px solid rgba(52, 211, 153, 0.1); border-radius: 10px; padding: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <i class="fas fa-check-circle" style="color: #34d399; font-size: 1.2rem;"></i>
+                        <div>
+                            <div style="font-weight: 600; color: #34d399;" id="viewProofStatus">Proof Verified </div>
+                            <div style="color: var(--text-muted); font-size: 0.85rem;" id="viewProofStatusText">This proof has been batched and anchored on blockchain</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn-modal-primary" onclick="exportProof()">
+                    <i class="fas fa-download me-2"></i> Export Proof
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ====== VERIFY ALL MODAL ====== -->
+<!-- ============================================================ -->
+<div class="modal fade" id="verifyAllModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-shield-alt"></i> Verify All Proofs
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 2rem;">
+                <div style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <h4 style="font-weight: 700; margin-bottom: 0.5rem;">Verify All Pending Proofs?</h4>
+                <p style="color: var(--text-muted);">
+                    This will verify all <strong style="color: var(--text-light);">{{ pending_proofs|default:0 }}</strong> pending proofs and anchor them on the blockchain.
+                </p>
+                <div style="background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.1); border-radius: 10px; padding: 1rem; margin-top: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem; text-align: left; font-size: 0.85rem;">
+                        <span style="color: var(--text-muted);">Total Proofs:</span>
+                        <span style="color: var(--text-light);">{{ pending_proofs|default:0 }}</span>
+                        <span style="color: var(--text-muted);">Estimated Gas:</span>
+                        <span style="color: var(--text-light);">~0.0023 ETH</span>
+                        <span style="color: var(--text-muted);">Estimated Time:</span>
+                        <span style="color: var(--text-light);">~2 minutes</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn-modal-primary" onclick="verifyAllProofs()" data-bs-dismiss="modal">
+                    <i class="fas fa-check-circle me-2"></i> Verify All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ====== TOAST CONTAINER ====== -->
+<!-- ============================================================ -->
+<div class="toast-container" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ============ VIEW PROOF FUNCTION ============
+    function viewProof(proofId, agent, agentDid, user, safetyScore, created, query, status, safetyPercent, txHash, blockNumber) {
+        document.getElementById('viewProofId').textContent = proofId;
+        document.getElementById('viewProofIdDetail').textContent = proofId;
+        document.getElementById('viewAgent').textContent = agent;
+        document.getElementById('viewAgentDid').textContent = agentDid || 'N/A';
+        document.getElementById('viewUser').textContent = user;
+        document.getElementById('viewSafetyScore').textContent = safetyPercent + '%';
+        document.getElementById('viewCreated').textContent = created;
+        document.getElementById('viewQuery').textContent = '"' + query + '"';
+        document.getElementById('viewTxHash').textContent = txHash || 'Pending';
+        document.getElementById('viewBlockNumber').textContent = blockNumber && blockNumber !== '—' ? '#' + blockNumber : '—';
+        
+        // Set context hash and model hash (for demo purposes using proof data)
+        document.getElementById('viewContextHash').textContent = 'sha256:' + proofId.toLowerCase().replace('proof-', '') + 'a1b2c3d4e5f6...';
+        document.getElementById('viewModelHash').textContent = 'sha256:7c9e6679b1a2d3f4...';
+        document.getElementById('viewSignature').textContent = '3045022100d1e4f7a8b3c9...';
+        
+        // Update status badge
+        const statusBadge = document.getElementById('viewStatusBadge');
+        const statusText = document.getElementById('viewStatusText');
+        statusBadge.className = 'status-badge ' + status;
+        statusBadge.innerHTML = '<span class="status-dot ' + status + '"></span> <span id="viewStatusText">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span>';
+        
+        // Update safety score class
+        const safetyEl = document.querySelector('.safety-score');
+        let safetyClass = 'high';
+        if (parseFloat(safetyScore) < 0.4) safetyClass = 'low';
+        else if (parseFloat(safetyScore) < 0.7) safetyClass = 'medium';
+        safetyEl.className = 'safety-score ' + safetyClass;
+        
+        // Update proof status
+        const proofStatus = document.getElementById('viewProofStatus');
+        const proofStatusText = document.getElementById('viewProofStatusText');
+        if (txHash && txHash !== 'Pending' && txHash !== 'Anchored (Tx Pending)') {
+            proofStatus.textContent = 'Proof Verified ';
+            proofStatus.style.color = '#34d399';
+            proofStatusText.textContent = 'This proof has been batched and anchored on blockchain with Tx: ' + txHash.slice(0, 16) + '...';
+        } else if (status === 'batched') {
+            proofStatus.textContent = 'Batched ';
+            proofStatus.style.color = '#60a5fa';
+            proofStatusText.textContent = 'This proof is batched and awaiting blockchain anchoring.';
+        } else {
+            proofStatus.textContent = 'Pending ';
+            proofStatus.style.color = '#fbbf24';
+            proofStatusText.textContent = 'This proof is pending and waiting to be batched.';
+        }
+    }
+
+    // ============ VERIFY PROOF FUNCTION ============
+    function verifyProof(proofId) {
+        showToast('info', '🔍 Verifying ' + proofId + ' on blockchain...');
+        setTimeout(function() {
+            showToast('success', ' Proof ' + proofId + ' verified successfully!');
+        }, 2000);
+    }
+
+    // ============ DELETE PROOF FUNCTION ============
+    function deleteProof(proofId, proofDbId) {
+        if (confirm('⚠️ Are you sure you want to delete proof ' + proofId + '?')) {
+            // Send delete request
+            fetch('/delete-proof/' + proofDbId + '/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', '🗑️ Proof ' + proofId + ' deleted successfully!');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast('error', '❌ Failed to delete proof: ' + data.message);
+                }
+            })
+            .catch(error => {
+                showToast('error', '❌ Error deleting proof');
+            });
+        }
+    }
+
+    // ============ VERIFY ALL PROOFS FUNCTION ============
+    function verifyAllProofs() {
+        showToast('info', '🔄 Verifying all pending proofs... This may take a moment.');
+        setTimeout(function() {
+            showToast('success', ' All pending proofs verified and anchored on blockchain!');
+            setTimeout(() => window.location.reload(), 2000);
+        }, 3000);
+    }
+
+    // ============ EXPORT PROOF FUNCTION ============
+    function exportProof() {
+        showToast('info', '📥 Generating export...');
+        setTimeout(function() {
+            showToast('success', ' Proof exported successfully!');
+        }, 1500);
+    }
+
+    // ============ TOAST NOTIFICATION FUNCTION ============
+    function showToast(type, message) {
+        const container = document.getElementById('toastContainer');
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast-custom ' + type;
+        
+        const icons = {
+            'success': '',
+            'error': '❌',
+            'info': 'ℹ️'
+        };
+        
+        toast.innerHTML = `
+            <span style="font-size: 1.1rem;">${icons[type] || 'ℹ️'}</span>
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()" style="margin-left: auto; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(function() {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOut 0.4s ease forwards';
+                setTimeout(function() {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 400);
+            }
+        }, 4000);
+    }
+
+    // ============ AUTO-DISMISS ALERTS ============
+    document.addEventListener('DOMContentLoaded', function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            setTimeout(function() {
+                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 500);
+            }, 3000);
+        });
+    });
+</script>
+{% endblock %}

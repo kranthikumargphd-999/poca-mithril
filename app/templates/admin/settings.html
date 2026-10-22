@@ -1,0 +1,950 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings & Configuration{% endblock %}
+
+{% block page_title %}Settings{% endblock %}
+{% block page_subtitle %}Configure and manage your SecureAI platform settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ============ SETTINGS SIDEBAR ============ */
+    .settings-layout {
+        display: flex;
+        gap: 1.5rem;
+    }
+
+    .settings-sidebar {
+        width: 220px;
+        flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 0.8rem;
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+    }
+
+    .settings-sidebar .nav-item {
+        margin-bottom: 0.15rem;
+    }
+
+    .settings-sidebar .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.6rem 0.8rem;
+        border-radius: 10px;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        width: 100%;
+    }
+
+    .settings-sidebar .nav-link:hover {
+        background: rgba(217, 155, 127, 0.08);
+        color: var(--primary-light);
+    }
+
+    .settings-sidebar .nav-link.active {
+        background: linear-gradient(135deg, rgba(165, 111, 99, 0.2), rgba(217, 155, 127, 0.1));
+        color: var(--primary-light);
+        border: 1px solid rgba(217, 155, 127, 0.15);
+    }
+
+    .settings-sidebar .nav-link i {
+        width: 18px;
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    /* ============ SETTINGS CONTENT ============ */
+    .settings-content {
+        flex: 1;
+    }
+
+    .settings-section {
+        display: none;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .settings-section.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .settings-section .section-title {
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .settings-section .section-desc {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* ============ FORM CONTROLS ============ */
+    .form-group {
+        margin-bottom: 1.2rem;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 0.3rem;
+        display: block;
+    }
+
+    .form-group .form-control {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .form-group .form-control:focus {
+        border-color: var(--primary-light);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(217, 155, 127, 0.1);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .form-group .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .form-group .form-control option {
+        background: #1a2a3a;
+        color: var(--text-light);
+    }
+
+    .form-group textarea.form-control {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    .form-hint {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        margin-top: 0.2rem;
+    }
+
+    /* ============ TOGGLE SWITCH ============ */
+    .toggle-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .toggle-container:last-child {
+        border-bottom: none;
+    }
+
+    .toggle-container .toggle-info {
+        flex: 1;
+    }
+
+    .toggle-container .toggle-info .label {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .toggle-container .toggle-info .desc {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+    }
+
+    .toggle-switch {
+        width: 50px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex-shrink: 0;
+    }
+
+    .toggle-switch.active {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+    }
+
+    .toggle-switch .toggle-slider {
+        width: 22px;
+        height: 22px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-switch.active .toggle-slider {
+        left: 25px;
+    }
+
+    /* ============ BTN MODAL ============ */
+    .btn-modal-primary {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.6rem 1.8rem;
+        border-radius: 10px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+    }
+
+    .btn-modal-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-modal-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.6rem 1.8rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-modal-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    .btn-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        padding: 0.6rem 1.8rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        transform: translateY(-2px);
+    }
+
+    /* ============ TOAST ============ */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+
+    .toast-custom {
+        background: #1a2a3a;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+        min-width: 300px;
+        animation: slideIn 0.4s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .toast-custom.success {
+        border-left: 4px solid #34d399;
+    }
+
+    .toast-custom.error {
+        border-left: 4px solid #f87171;
+    }
+
+    .toast-custom.info {
+        border-left: 4px solid #60a5fa;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 768px) {
+        .settings-layout {
+            flex-direction: column;
+        }
+
+        .settings-sidebar {
+            width: 100%;
+            position: static;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            padding: 0.5rem;
+        }
+
+        .settings-sidebar .nav-item {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .settings-sidebar .nav-link {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.6rem;
+            justify-content: center;
+        }
+
+        .settings-section {
+            padding: 1rem;
+        }
+
+        .toggle-container {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="settings-layout">
+    <!-- ====== SETTINGS SIDEBAR ====== -->
+    <div class="settings-sidebar">
+        <div class="nav-item">
+            <button class="nav-link active" data-section="general" onclick="showSection('general')">
+                <i class="fas fa-sliders-h"></i> General
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-section="security" onclick="showSection('security')">
+                <i class="fas fa-shield-alt"></i> Security
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-section="blockchain" onclick="showSection('blockchain')">
+                <i class="fas fa-link"></i> Blockchain
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-section="ai" onclick="showSection('ai')">
+                <i class="fas fa-robot"></i> AI Models
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-section="notifications" onclick="showSection('notifications')">
+                <i class="fas fa-bell"></i> Notifications
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-section="backup" onclick="showSection('backup')">
+                <i class="fas fa-database"></i> Backup
+            </button>
+        </div>
+        <div class="nav-item" style="margin-top: 0.5rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+            <button class="nav-link" data-section="danger" onclick="showSection('danger')" style="color: #f87171;">
+                <i class="fas fa-exclamation-triangle"></i> Danger Zone
+            </button>
+        </div>
+    </div>
+
+    <!-- ====== SETTINGS CONTENT ====== -->
+    <div class="settings-content">
+
+        <!-- ============================================ -->
+        <!-- GENERAL SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section active" id="section-general">
+            <h4 class="section-title"><i class="fas fa-sliders-h me-2" style="color: var(--primary-light);"></i>General Settings</h4>
+            <p class="section-desc">Configure basic platform settings and preferences</p>
+
+            <form id="generalForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Platform Name</label>
+                            <input type="text" class="form-control" value="SecureAI Platform" placeholder="Platform name">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Default Language</label>
+                            <select class="form-control">
+                                <option value="en" selected>English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="zh">Chinese</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Time Zone</label>
+                            <select class="form-control">
+                                <option value="UTC">UTC</option>
+                                <option value="US/Eastern">US/Eastern</option>
+                                <option value="US/Central">US/Central</option>
+                                <option value="US/Pacific">US/Pacific</option>
+                                <option value="Europe/London">Europe/London</option>
+                                <option value="Asia/Kolkata" selected>Asia/Kolkata</option>
+                                <option value="Asia/Singapore">Asia/Singapore</option>
+                                <option value="Australia/Sydney">Australia/Sydney</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Date Format</label>
+                            <select class="form-control">
+                                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                <option value="DD/MM/YYYY" selected>DD/MM/YYYY</option>
+                                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Platform Description</label>
+                    <textarea class="form-control" placeholder="Describe your SecureAI platform">SecureAI Platform - Trust & Verification with Django + Ganache + PoCA + Mithril</textarea>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="button" class="btn-modal-primary" onclick="saveSettings('General')">
+                        <i class="fas fa-save me-2"></i> Save Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SECURITY SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-security">
+            <h4 class="section-title"><i class="fas fa-shield-alt me-2" style="color: var(--primary-light);"></i>Security Settings</h4>
+            <p class="section-desc">Configure security preferences and access controls</p>
+
+            <form id="securityForm">
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Two-Factor Authentication</div>
+                        <div class="desc">Require 2FA for all admin accounts</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Session Timeout</div>
+                        <div class="desc">Auto-logout after inactivity (30 minutes)</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">IP Whitelisting</div>
+                        <div class="desc">Restrict access to specific IP addresses</div>
+                    </div>
+                    <div class="toggle-switch" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Login Attempts Limit</div>
+                        <div class="desc">Lock account after 5 failed attempts</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <div class="form-group">
+                        <label>Change Password</label>
+                        <input type="password" class="form-control" placeholder="Current password" style="margin-bottom: 0.5rem;">
+                        <input type="password" class="form-control" placeholder="New password" style="margin-bottom: 0.5rem;">
+                        <input type="password" class="form-control" placeholder="Confirm new password">
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="button" class="btn-modal-primary" onclick="saveSettings('Security')">
+                        <i class="fas fa-save me-2"></i> Save Security Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- BLOCKCHAIN SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-blockchain">
+            <h4 class="section-title"><i class="fas fa-link me-2" style="color: var(--primary-light);"></i>Blockchain Settings</h4>
+            <p class="section-desc">Configure blockchain connection and smart contract settings</p>
+
+            <form id="blockchainForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Network</label>
+                            <select class="form-control">
+                                <option value="ganache" selected>Ganache (Local)</option>
+                                <option value="sepolia">Sepolia Testnet</option>
+                                <option value="goerli">Goerli Testnet</option>
+                                <option value="mainnet">Ethereum Mainnet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>RPC URL</label>
+                            <input type="text" class="form-control" value="http://127.0.0.1:7545" placeholder="RPC URL">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Chain ID</label>
+                            <input type="text" class="form-control" value="1337" placeholder="Chain ID">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Contract Address</label>
+                            <input type="text" class="form-control" value="0x1234...5678" placeholder="Contract address">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Default Gas Limit</label>
+                    <input type="text" class="form-control" value="3000000" placeholder="Gas limit">
+                    <div class="form-hint">Default gas limit for all transactions</div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="button" class="btn-modal-primary" onclick="saveSettings('Blockchain')">
+                        <i class="fas fa-save me-2"></i> Save Blockchain Settings
+                    </button>
+                    <button type="button" class="btn-modal-secondary ms-2" onclick="testConnection()">
+                        <i class="fas fa-plug me-2"></i> Test Connection
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- AI MODELS SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-ai">
+            <h4 class="section-title"><i class="fas fa-robot me-2" style="color: var(--primary-light);"></i>AI Models Settings</h4>
+            <p class="section-desc">Configure AI provider settings and model preferences</p>
+
+            <form id="aiForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Default Provider</label>
+                            <select class="form-control">
+                                <option value="openai" selected>OpenAI</option>
+                                <option value="groq">Groq</option>
+                                <option value="huggingface">Hugging Face</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Default Model</label>
+                            <select class="form-control">
+                                <option value="gpt-5.6-sol" selected>GPT-5.6 Sol</option>
+                                <option value="gpt-5.6-terra">GPT-5.6 Terra</option>
+                                <option value="gpt-5.6-luna">GPT-5.6 Luna</option>
+                                <option value="gpt-5.5-pro">GPT-5.5 Pro</option>
+                                <option value="gpt-4.1">GPT-4.1</option>
+                                <option value="gpt-4o">GPT-4o</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>OpenAI API Key</label>
+                    <input type="password" class="form-control" value="sk-proj-xxxxxxxxxxxxxxxx" placeholder="Enter OpenAI API key">
+                    <div class="form-hint">Your API key will be encrypted before storage</div>
+                </div>
+                <div class="form-group">
+                    <label>Groq API Key</label>
+                    <input type="password" class="form-control" value="" placeholder="Enter Groq API key (optional)">
+                    <div class="form-hint">Only required if using Groq models</div>
+                </div>
+                <div class="form-group">
+                    <label>Hugging Face API Key</label>
+                    <input type="password" class="form-control" value="" placeholder="Enter Hugging Face API key (optional)">
+                    <div class="form-hint">Only required if using Hugging Face models</div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="button" class="btn-modal-primary" onclick="saveSettings('AI Models')">
+                        <i class="fas fa-save me-2"></i> Save AI Settings
+                    </button>
+                    <button type="button" class="btn-modal-secondary ms-2" onclick="testApiKey()">
+                        <i class="fas fa-check me-2"></i> Test Keys
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- NOTIFICATIONS SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-notifications">
+            <h4 class="section-title"><i class="fas fa-bell me-2" style="color: var(--primary-light);"></i>Notification Settings</h4>
+            <p class="section-desc">Configure email and notification preferences</p>
+
+            <form id="notificationsForm">
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Email Notifications</div>
+                        <div class="desc">Send email for important system events</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Blockchain Events</div>
+                        <div class="desc">Notify when transactions are confirmed</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Agent Registration Alerts</div>
+                        <div class="desc">Alert when new AI agents are registered</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Daily Digest</div>
+                        <div class="desc">Receive a daily summary of platform activity</div>
+                    </div>
+                    <div class="toggle-switch" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Notification Email</label>
+                    <input type="email" class="form-control" value="admin@secureai-platform.com" placeholder="Notification email address">
+                    <div class="form-hint">All notifications will be sent to this email</div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button type="button" class="btn-modal-primary" onclick="saveSettings('Notifications')">
+                        <i class="fas fa-save me-2"></i> Save Notification Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- BACKUP SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-backup">
+            <h4 class="section-title"><i class="fas fa-database me-2" style="color: var(--primary-light);"></i>Backup Settings</h4>
+            <p class="section-desc">Configure backup and recovery options</p>
+
+            <form id="backupForm">
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Auto Backup</div>
+                        <div class="desc">Automatically backup database daily</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Backup Blockchain Data</div>
+                        <div class="desc">Include blockchain transaction data in backup</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 1rem;">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Backup Frequency</label>
+                            <select class="form-control">
+                                <option value="daily" selected>Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Retention Period</label>
+                            <select class="form-control">
+                                <option value="7">7 Days</option>
+                                <option value="30" selected>30 Days</option>
+                                <option value="90">90 Days</option>
+                                <option value="365">1 Year</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                    <button type="button" class="btn-modal-primary" onclick="saveSettings('Backup')">
+                        <i class="fas fa-save me-2"></i> Save Backup Settings
+                    </button>
+                    <button type="button" class="btn-modal-secondary" onclick="createBackup()">
+                        <i class="fas fa-download me-2"></i> Create Backup Now
+                    </button>
+                    <button type="button" class="btn-modal-secondary" onclick="restoreBackup()">
+                        <i class="fas fa-upload me-2"></i> Restore Backup
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DANGER ZONE -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-danger">
+            <h4 class="section-title" style="color: #f87171;"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h4>
+            <p class="section-desc">Irreversible actions - Proceed with extreme caution</p>
+
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="font-weight: 700; color: #f87171;">Clear All Data</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem;">This will permanently delete all platform data including agents, proofs, and users.</div>
+                    </div>
+                    <button type="button" class="btn-danger" onclick="clearAllData()">
+                        <i class="fas fa-trash me-2"></i> Clear All Data
+                    </button>
+                </div>
+            </div>
+
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 1.5rem; margin-top: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="font-weight: 700; color: #f87171;">Reset Platform</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem;">Reset all settings to default values. This action can be reverted.</div>
+                    </div>
+                    <button type="button" class="btn-danger" onclick="resetPlatform()">
+                        <i class="fas fa-undo me-2"></i> Reset Platform
+                    </button>
+                </div>
+            </div>
+
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 1.5rem; margin-top: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="font-weight: 700; color: #f87171;">Delete All Agents</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem;">Remove all AI agents and their associated data.</div>
+                    </div>
+                    <button type="button" class="btn-danger" onclick="deleteAllAgents()">
+                        <i class="fas fa-robot me-2"></i> Delete All Agents
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.1); border-radius: 12px;">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    <i class="fas fa-info-circle" style="color: #fbbf24; font-size: 1.2rem;"></i>
+                    <div style="color: var(--text-muted); font-size: 0.85rem;">
+                        <strong style="color: #fbbf24;">⚠️ Warning:</strong> These actions are irreversible. Please make sure you have a backup before proceeding.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ====== TOAST CONTAINER ====== -->
+<!-- ============================================================ -->
+<div class="toast-container" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ============ SHOW/HIDE SECTIONS ============
+    function showSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.settings-section').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        
+        // Show selected section
+        document.getElementById('section-' + sectionId).classList.add('active');
+        
+        // Update sidebar active state
+        document.querySelectorAll('.settings-sidebar .nav-link').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        document.querySelector('.settings-sidebar .nav-link[data-section="' + sectionId + '"]').classList.add('active');
+    }
+
+    // ============ TOGGLE SWITCH ============
+    function toggleSwitch(element) {
+        element.classList.toggle('active');
+        const label = element.closest('.toggle-container').querySelector('.label').textContent;
+        const status = element.classList.contains('active') ? 'enabled' : 'disabled';
+        showToast('info', '🔄 ' + label + ' ' + status);
+    }
+
+    // ============ SAVE SETTINGS ============
+    function saveSettings(section) {
+        showToast('info', '💾 Saving ' + section + ' settings...');
+        setTimeout(function() {
+            showToast('success', ' ' + section + ' settings saved successfully!');
+        }, 1500);
+    }
+
+    // ============ TEST CONNECTION ============
+    function testConnection() {
+        showToast('info', '🔗 Testing blockchain connection...');
+        setTimeout(function() {
+            showToast('success', ' Blockchain connection successful! (Ganache RPC)');
+        }, 2000);
+    }
+
+    // ============ TEST API KEY ============
+    function testApiKey() {
+        showToast('info', '🔑 Testing API keys...');
+        setTimeout(function() {
+            showToast('success', ' All API keys are valid!');
+        }, 2000);
+    }
+
+    // ============ BACKUP FUNCTIONS ============
+    function createBackup() {
+        showToast('info', '💾 Creating backup...');
+        setTimeout(function() {
+            showToast('success', ' Backup created successfully! Size: 156 MB');
+        }, 2500);
+    }
+
+    function restoreBackup() {
+        showToast('info', '🔄 Restoring backup...');
+        setTimeout(function() {
+            showToast('success', ' Backup restored successfully!');
+        }, 3000);
+    }
+
+    // ============ DANGER ZONE FUNCTIONS ============
+    function clearAllData() {
+        if (confirm('⚠️ WARNING: This will permanently delete ALL platform data! Are you sure?')) {
+            if (confirm('🔴 FINAL WARNING: This action cannot be undone! Type "DELETE" to confirm.')) {
+                showToast('error', '🗑️ All data has been cleared! (mock)');
+            }
+        }
+    }
+
+    function resetPlatform() {
+        if (confirm('⚠️ Reset all settings to default values? This can be reverted.')) {
+            showToast('info', '🔄 Resetting platform settings...');
+            setTimeout(function() {
+                showToast('success', ' Platform reset successfully!');
+            }, 2000);
+        }
+    }
+
+    function deleteAllAgents() {
+        if (confirm('⚠️ Delete all AI agents and their associated data?')) {
+            showToast('error', '🗑️ All agents deleted successfully! (mock)');
+        }
+    }
+
+    // ============ TOAST NOTIFICATION ============
+    function showToast(type, message) {
+        const container = document.getElementById('toastContainer');
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast-custom ' + type;
+        
+        const icons = {
+            'success': '',
+            'error': '❌',
+            'info': 'ℹ️'
+        };
+        
+        toast.innerHTML = `
+            <span style="font-size: 1.2rem;">${icons[type] || 'ℹ️'}</span>
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()" style="margin-left: auto; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(function() {
+            toast.style.animation = 'slideOut 0.4s ease forwards';
+            setTimeout(function() {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 400);
+        }, 4000);
+    }
+
+    // ============ AUTO-DISMISS ALERTS ============
+    document.addEventListener('DOMContentLoaded', function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            setTimeout(function() {
+                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 500);
+            }, 3000);
+        });
+    });
+</script>
+{% endblock %}

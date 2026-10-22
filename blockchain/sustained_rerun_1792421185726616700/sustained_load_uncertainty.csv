@@ -1,0 +1,3 @@
+Operations,Trials,Latency Mean(ms),Latency SD(ms),Throughput Mean,Throughput SD,Gas Mean,Gas SD,Total Failures,Latency IQR Outliers,Gas IQR Outliers
+1000,3,64.452,0.615,15.502,0.148,140595.4,0.11,0,154,94
+5000,3,71.851,1.263,13.909,0.243,140616.49,0.03,0,836,980

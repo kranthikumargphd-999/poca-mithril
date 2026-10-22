@@ -1,0 +1,8 @@
+PASS: first acceptance and replay after process restart
+Restart results: {'accepted': True, 'status': 'ACCEPTED'} {'accepted': False, 'status': 'ALREADY_ACCEPTED_OR_CHANGED'}
+Concurrent results: [{'accepted': False, 'status': 'ALREADY_ACCEPTED_OR_CHANGED'}, {'accepted': False, 'status': 'ALREADY_ACCEPTED_OR_CHANGED'}, {'accepted': True, 'status': 'ACCEPTED'}, {'accepted': False, 'status': 'ALREADY_ACCEPTED_OR_CHANGED'}, {'accepted': False, 'status': 'ALREADY_ACCEPTED_OR_CHANGED'}]
+Accepted=1, Duplicate rejections=4, Database busy=0
+PASS: exactly one acceptance across five processes
+PASS: invalid proof rejected without consuming identifier
+ALL ACCEPTANCE CHECKS PASSED
+Scope: real ECDSA verification and shared file-based SQLite; blockchain registry responses were mocked.

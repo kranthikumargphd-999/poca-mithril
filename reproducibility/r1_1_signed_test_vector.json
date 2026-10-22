@@ -1,0 +1,25 @@
+{
+    "test_name": "R1.1 Canonical PoCA Signed Test Vector",
+    "version": 1,
+    "proof_id": "RESP-0001",
+    "agent_did": "did:secureai:af533e027d9d6ccc0958c470c26ea9d9",
+    "context_hash": "sha256:abc123",
+    "model_hash": "sha256:def456",
+    "timestamp": "2026-10-09T12:30:00+00:00",
+    "safety_score": "0.87",
+    "signature_algorithm": "ECDSA-secp256k1-SHA256",
+    "public_key": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
+    "signature": "ccdfa7b470f0150d909e0c6316c90ad8964774a2d9504db0bcdaaeb5bd739cc61d54a1280d40363c3fcc176d2bc52ada9e45153f1c5a890438b71755bf43aca0",
+    "canonical_json": "{\"agent_did\":\"did:secureai:af533e027d9d6ccc0958c470c26ea9d9\",\"context_hash\":\"sha256:abc123\",\"model_hash\":\"sha256:def456\",\"proof_id\":\"RESP-0001\",\"safety_score\":\"0.87\",\"timestamp\":\"2026-10-09T12:30:00+00:00\",\"version\":1}",
+    "canonical_utf8_hex": "7b226167656e745f646964223a226469643a73656375726561693a6166353333653032376439643663636330393538633437306332366561396439222c22636f6e746578745f68617368223a227368613235363a616263313233222c226d6f64656c5f68617368223a227368613235363a646566343536222c2270726f6f665f6964223a22524553502d30303031222c227361666574795f73636f7265223a22302e3837222c2274696d657374616d70223a22323032362d31302d30395431323a33303a30302b30303a3030222c2276657273696f6e223a317d",
+    "observed_results": {
+        "canonical_message_bytes": "PASS",
+        "original_signature_verification": "PASS",
+        "modified_signed_field": "REJECTED",
+        "fixture_model_hash_match": true,
+        "automated_tests_passed": 3,
+        "automated_tests_total": 3,
+        "execution_time_seconds": 0.038
+    },
+    "note": "Test-only values. The model-hash match is a local fixture comparison, not evidence of a live blockchain registry lookup."
+}

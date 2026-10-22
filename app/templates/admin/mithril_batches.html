@@ -1,0 +1,1465 @@
+{% extends 'base.html' %}
+
+{% block title %}Mithril Batches Management{% endblock %}
+
+{% block page_title %}Mithril Batches{% endblock %}
+{% block page_subtitle %}Batch aggregation with Merkle trees and aggregated signatures{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ============ STATS CARDS ============ */
+    .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-warm), var(--primary-light));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .stat-card:hover::before { opacity: 1; }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(217, 155, 127, 0.3);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-card .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .stat-card .stat-icon.green  { background: rgba(52, 211, 153, 0.15);  color: #34d399; }
+    .stat-card .stat-icon.blue   { background: rgba(96, 165, 250, 0.15);  color: #60a5fa; }
+    .stat-card .stat-icon.orange { background: rgba(251, 191, 36, 0.15);  color: #fbbf24; }
+    .stat-card .stat-icon.purple { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+
+    .stat-card .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-light);
+        margin-bottom: 0.2rem;
+    }
+
+    .stat-card .stat-label {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .stat-card .stat-change {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 50px;
+        margin-top: 0.3rem;
+    }
+
+    .stat-change.up   { color: #34d399; background: rgba(52, 211, 153, 0.1); }
+    .stat-change.down { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+
+    /* ============ FILTER SECTION ============ */
+    .filter-section {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 1.2rem 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-section .filter-label {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .filter-section .filter-control {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        width: 100%;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .filter-section .filter-control:focus {
+        border-color: var(--primary-light);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(217, 155, 127, 0.1);
+    }
+
+    .filter-section .filter-control option {
+        background: var(--primary-dark);
+        color: var(--text-light);
+    }
+
+    .btn-filter {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-reset {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .btn-reset:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    /* ============ TABLE ============ */
+    .table-container {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .table-custom {
+        color: var(--text-light);
+        margin-bottom: 0;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-custom thead th {
+        border-bottom: 2px solid var(--border-color);
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0.8rem 0.8rem;
+        background: rgba(255, 255, 255, 0.02);
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .table-custom tbody td {
+        border-bottom: 1px solid var(--border-color);
+        padding: 0.7rem 0.8rem;
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+
+    .table-custom tbody tr { transition: all 0.3s ease; }
+    .table-custom tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+    .table-custom tbody tr:last-child td { border-bottom: none; }
+
+    /* ============ STATUS BADGE ============ */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.2rem 0.7rem;
+        border-radius: 50px;
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+
+    .status-badge.anchored   { background: rgba(52, 211, 153, 0.15);  color: #34d399; }
+    .status-badge.pending    { background: rgba(251, 191, 36, 0.15);  color: #fbbf24; }
+    .status-badge.failed     { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+    .status-badge.processing { background: rgba(96, 165, 250, 0.15);  color: #60a5fa; }
+
+    .status-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .status-dot.anchored   { background: #34d399; }
+    .status-dot.pending    { background: #fbbf24; }
+    .status-dot.failed     { background: #f87171; }
+    .status-dot.processing { background: #60a5fa; }
+
+    /* ============ AGENT TAGS ============ */
+    .agent-tag-small {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.6rem;
+        background: rgba(217, 155, 127, 0.08);
+        border: 1px solid rgba(217, 155, 127, 0.1);
+        color: var(--text-muted);
+        margin: 0.1rem;
+        cursor: help;
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .agent-tag-small .agent-name { font-weight: 500; }
+
+    .agent-tag-small .agent-did {
+        font-family: monospace;
+        font-size: 0.5rem;
+        opacity: 0.6;
+        margin-left: 0.1rem;
+    }
+
+    .agent-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.2rem;
+        max-width: 200px;
+    }
+
+    .agent-list .more-agents {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        opacity: 0.6;
+    }
+
+    /* ============ TX HASH ============ */
+    .tx-hash-cell {
+        font-family: monospace;
+        font-size: 0.7rem;
+        color: var(--primary-light);
+        cursor: help;
+    }
+
+    /* ============ PROOF COUNT MISMATCH ============ */
+    .proof-count { font-weight: 600; color: var(--primary-light); }
+
+    .proof-count.mismatch {
+        color: #fbbf24;
+        cursor: help;
+        border-bottom: 1px dotted #fbbf24;
+    }
+
+    /* ============ PAGINATION ============ */
+    .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.8rem 1.5rem;
+        border-top: 1px solid var(--border-color);
+        flex-wrap: wrap;
+        gap: 0.8rem;
+    }
+
+    .pagination-info { color: var(--text-muted); font-size: 0.85rem; }
+    .pagination-info strong { color: var(--text-light); }
+
+    .pagination { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+
+    .pagination .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        padding: 0 0.8rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .pagination .page-link:hover {
+        background: rgba(217, 155, 127, 0.08);
+        border-color: var(--primary-light);
+        color: var(--primary-light);
+        transform: translateY(-2px);
+    }
+
+    .pagination .page-link.active {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        border-color: var(--primary-light);
+        color: #0F3040;
+        font-weight: 700;
+    }
+
+    .pagination .page-link.disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .pagination .page-link .fa-chevron-left,
+    .pagination .page-link .fa-chevron-right { font-size: 0.65rem; }
+
+    /* ============ ACTION BUTTONS ============ */
+    .action-btns {
+        display: flex;
+        gap: 0.3rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .action-btns .btn-action {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: transparent;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 0.75rem;
+    }
+
+    .action-btns .btn-action:hover {
+        background: rgba(217, 155, 127, 0.1);
+        border-color: var(--primary-light);
+        color: var(--primary-light);
+    }
+
+    .action-btns .btn-action.anchor:hover {
+        background: rgba(52, 211, 153, 0.1);
+        border-color: #34d399;
+        color: #34d399;
+    }
+
+    .action-btns .btn-action.delete:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: #f87171;
+        color: #f87171;
+    }
+
+    .action-btns .btn-action.verify:hover {
+        background: rgba(96, 165, 250, 0.1);
+        border-color: #60a5fa;
+        color: #60a5fa;
+    }
+
+    /* ============ MODAL ============ */
+    .modal-content {
+        background: #1a2a3a;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        color: var(--text-light);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem 1.5rem;
+    }
+
+    .modal-header .modal-title {
+        font-weight: 700;
+        color: var(--text-light);
+        font-size: 1.1rem;
+    }
+
+    .modal-header .modal-title i {
+        color: var(--primary-light);
+        margin-right: 0.5rem;
+    }
+
+    .modal-header .btn-close { filter: invert(1); opacity: 0.6; }
+
+    .modal-body {
+        padding: 1.5rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 0.8rem 1.5rem;
+    }
+
+    .btn-modal-primary {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-modal-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-modal-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.5rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .btn-modal-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    /* ============ VIEW MODAL DETAILS ============ */
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        font-size: 0.85rem;
+    }
+
+    .detail-row .label {
+        color: var(--text-muted);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        white-space: nowrap;
+    }
+
+    .detail-row .value {
+        color: var(--text-light);
+        font-weight: 500;
+        text-align: right;
+        word-break: break-all;
+        max-width: 60%;
+    }
+
+    .detail-row .value.mono {
+        font-family: monospace;
+        font-size: 0.75rem;
+    }
+
+    .detail-row:last-child { border-bottom: none; }
+
+    /* Agent list in modal */
+    .agents-list-modal {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        justify-content: flex-end;
+    }
+
+    .agents-list-modal .agent-item-modal {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        background: rgba(217, 155, 127, 0.06);
+        border: 1px solid rgba(217, 155, 127, 0.08);
+    }
+
+    .agents-list-modal .agent-item-modal .did {
+        font-family: monospace;
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        opacity: 0.6;
+    }
+
+    /* Integrity notice inside the modal */
+    .integrity-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.6rem 0.8rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        line-height: 1.4;
+        margin-bottom: 1rem;
+    }
+
+    .integrity-note.ok {
+        background: rgba(52, 211, 153, 0.08);
+        border: 1px solid rgba(52, 211, 153, 0.2);
+        color: #34d399;
+    }
+
+    .integrity-note.warn {
+        background: rgba(251, 191, 36, 0.08);
+        border: 1px solid rgba(251, 191, 36, 0.2);
+        color: #fbbf24;
+    }
+
+    /* ============ MERKLE TREE ============ */
+    .merkle-tree {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        min-height: 80px;
+        overflow-x: auto;
+    }
+
+    /* Wrapper that stacks the levels vertically — this is the fix for the
+       old markup, where levels were appended inside a flex-row container. */
+    #merkleTreeLevels {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.45rem;
+    }
+
+    .merkle-tree .tree-level {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    #merkleTreeLevels .tree-level { margin-bottom: 0; }
+
+    .merkle-tree .tree-node {
+        background: rgba(217, 155, 127, 0.08);
+        border: 1px solid rgba(217, 155, 127, 0.15);
+        border-radius: 6px;
+        padding: 0.3rem 0.6rem;
+        font-family: monospace;
+        font-size: 0.6rem;
+        color: var(--primary-light);
+        min-width: 60px;
+        text-align: center;
+        transition: all 0.2s ease;
+        cursor: help;
+    }
+
+    .merkle-tree .tree-node:hover {
+        background: rgba(217, 155, 127, 0.15);
+        transform: scale(1.05);
+    }
+
+    .merkle-tree .tree-node.root {
+        background: rgba(52, 211, 153, 0.12);
+        border-color: #34d399;
+        color: #34d399;
+        font-weight: 700;
+        font-size: 0.7rem;
+        padding: 0.4rem 1rem;
+        min-width: 100px;
+    }
+
+    .merkle-tree .tree-node.leaf {
+        background: rgba(96, 165, 250, 0.06);
+        border-color: rgba(96, 165, 250, 0.15);
+        color: #60a5fa;
+        font-size: 0.55rem;
+        padding: 0.2rem 0.4rem;
+        min-width: 50px;
+    }
+
+    .merkle-tree .tree-node.intermediate {
+        background: rgba(167, 139, 250, 0.06);
+        border-color: rgba(167, 139, 250, 0.15);
+        color: #a78bfa;
+        font-size: 0.55rem;
+        padding: 0.2rem 0.5rem;
+        min-width: 55px;
+    }
+
+    .merkle-tree .tree-node.empty {
+        color: var(--text-muted);
+        opacity: 0.5;
+        border-color: transparent;
+        background: transparent;
+        cursor: default;
+    }
+
+    .merkle-tree .level-tag {
+        color: var(--text-muted);
+        opacity: 0.35;
+        font-size: 0.55rem;
+        min-width: 46px;
+        text-align: right;
+        font-family: monospace;
+    }
+
+    .merkle-tree .tree-connector {
+        color: var(--text-muted);
+        opacity: 0.15;
+        font-size: 0.8rem;
+        margin: 0 0.1rem;
+        font-weight: 300;
+    }
+
+    .merkle-tree .tree-more {
+        color: var(--text-muted);
+        opacity: 0.4;
+        font-size: 0.6rem;
+        padding: 0.2rem 0.4rem;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 4px;
+    }
+
+    .merkle-tree .tree-label {
+        color: var(--text-muted);
+        font-size: 0.6rem;
+        opacity: 0.45;
+        margin-top: 0.7rem;
+        text-align: center;
+    }
+
+    /* ============ TOAST ============ */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+
+    .toast-custom {
+        background: #1a2a3a;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 0.8rem 1.2rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+        min-width: 280px;
+        animation: slideIn 0.4s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    .toast-custom.success { border-left: 4px solid #34d399; }
+    .toast-custom.error   { border-left: 4px solid #f87171; }
+    .toast-custom.info    { border-left: 4px solid #60a5fa; }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0);    opacity: 1; }
+        to   { transform: translateX(100%); opacity: 0; }
+    }
+
+    /* ============ EMPTY STATE ============ */
+    .empty-state { text-align: center; padding: 4rem 2rem; }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--primary-light);
+        opacity: 0.3;
+        margin-bottom: 1.5rem;
+    }
+
+    .empty-state h4 { font-weight: 700; margin-bottom: 0.5rem; }
+
+    .empty-state p {
+        color: var(--text-muted);
+        max-width: 400px;
+        margin: 0 auto 1.5rem;
+    }
+
+    .empty-state .btn-primary {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.8rem 2rem;
+        border-radius: 12px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    .empty-state .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 768px) {
+        .filter-section .row > div { margin-bottom: 0.8rem; }
+        .filter-section .row > div:last-child { margin-bottom: 0; }
+        .stat-card .stat-number { font-size: 1.5rem; }
+        .table-container { overflow-x: auto; }
+
+        .detail-row { flex-direction: column; padding: 0.4rem 0; }
+
+        .detail-row .value {
+            text-align: left;
+            max-width: 100%;
+            margin-top: 0.2rem;
+        }
+
+        .detail-row .agents-list-modal {
+            justify-content: flex-start;
+            margin-top: 0.2rem;
+        }
+
+        .merkle-tree .tree-level { gap: 0.3rem; }
+
+        .merkle-tree .tree-node {
+            font-size: 0.5rem;
+            padding: 0.2rem 0.4rem;
+            min-width: 40px;
+        }
+
+        .merkle-tree .level-tag { display: none; }
+
+        .agent-list { max-width: 100%; }
+
+        .pagination-container {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .pagination { justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+        .action-btns .btn-action {
+            width: 28px;
+            height: 28px;
+            font-size: 0.65rem;
+        }
+
+        .pagination .page-link {
+            min-width: 30px;
+            height: 30px;
+            font-size: 0.7rem;
+            padding: 0 0.4rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ====== STATS ROW ====== -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-tree"></i></div>
+            <div class="stat-number">{{ total_batches|default:0 }}</div>
+            <div class="stat-label">Total Batches</div>
+            <div class="stat-change up">
+                <i class="fas fa-arrow-up"></i> {{ total_batches|default:0 }} created
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-number">{{ anchored_batches|default:0 }}</div>
+            <div class="stat-label">Anchored on Blockchain</div>
+            <div class="stat-change up">
+                <i class="fas fa-arrow-up"></i> {{ pending_batches|default:0 }} pending
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+            <div class="stat-number">{{ pending_batches|default:0 }}</div>
+            <div class="stat-label">Pending Batches</div>
+            <div class="stat-change down">
+                <i class="fas fa-arrow-down"></i> {{ failed_batches|default:0 }} failed
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-fingerprint"></i></div>
+            <div class="stat-number">{{ total_proofs_batched|default:0 }}</div>
+            <div class="stat-label">Total Proofs Batched</div>
+            <div class="stat-change up">
+                <i class="fas fa-arrow-up"></i> {{ pending_proofs|default:0 }} pending
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== FILTER SECTION ====== -->
+<div class="filter-section">
+    <form method="GET" action="{% url 'mithril_batches' %}" class="row align-items-end">
+        <div class="col-md-3 col-sm-6">
+            <div class="filter-label"><i class="fas fa-search me-1"></i> Search</div>
+            <input type="text" name="search" class="filter-control" placeholder="Batch ID or Root..." value="{{ search|default:'' }}">
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="filter-label"><i class="fas fa-circle me-1"></i> Status</div>
+            <select name="status" class="filter-control">
+                <option value="">All Status</option>
+                <option value="anchored" {% if status_filter == 'anchored' %}selected{% endif %}>Anchored</option>
+                <option value="pending"  {% if status_filter == 'pending'  %}selected{% endif %}>Pending</option>
+                <option value="failed"   {% if status_filter == 'failed'   %}selected{% endif %}>Failed</option>
+            </select>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="filter-label"><i class="fas fa-sort-amount-up me-1"></i> Sort By</div>
+            <select name="sort" class="filter-control">
+                <option value="newest"       {% if sort == 'newest'       %}selected{% endif %}>Newest First</option>
+                <option value="oldest"       {% if sort == 'oldest'       %}selected{% endif %}>Oldest First</option>
+                <option value="most_proofs"  {% if sort == 'most_proofs'  %}selected{% endif %}>Most Proofs</option>
+                <option value="least_proofs" {% if sort == 'least_proofs' %}selected{% endif %}>Least Proofs</option>
+            </select>
+        </div>
+        <div class="col-md-4 col-sm-12">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn-filter">
+                    <i class="fas fa-search me-2"></i> Filter
+                </button>
+                <a href="{% url 'mithril_batches' %}" class="btn-reset">
+                    <i class="fas fa-undo me-2"></i> Reset
+                </a>
+                <button type="button" class="btn btn-modal-primary" style="width: 100%;" onclick="createBatch()">
+                    <i class="fas fa-plus me-2"></i> New Batch
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ====== BATCHES TABLE ====== -->
+<div class="table-container">
+    {% if batches %}
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th style="width: 10%;">Batch ID</th>
+                <th style="width: 12%;">Merkle Root</th>
+                <th style="width: 6%;">Proofs</th>
+                <th style="width: 10%;">Status</th>
+                <th style="width: 18%;">Agents (DID)</th>
+                <th style="width: 18%;">Tx Hash</th>
+                <th style="width: 10%;">Created</th>
+                <th style="width: 16%; text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for batch_item in batches %}
+            <tr>
+                <td>
+                    <span style="font-weight: 600; font-family: monospace; font-size: 0.8rem; color: var(--primary-light);">{{ batch_item.batch.batch_id }}</span>
+                </td>
+                <td>
+                    <span style="font-family: monospace; font-size: 0.7rem; color: var(--text-muted);" title="{{ batch_item.batch.merkle_root }}">{{ batch_item.batch.merkle_root|slice:":16" }}...</span>
+                </td>
+                <td style="text-align: center;">
+                    {% if batch_item.proof_mismatch %}
+                    <span class="proof-count mismatch"
+                        title="Record says {{ batch_item.batch.num_proofs }} proofs, but {{ batch_item.actual_proofs }} are actually attached.">
+                        {{ batch_item.actual_proofs }}<i class="fas fa-exclamation-triangle ms-1" style="font-size: 0.6rem;"></i>
+                    </span>
+                    {% else %}
+                    <span class="proof-count">{{ batch_item.actual_proofs }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="status-badge {{ batch_item.batch.status }}">
+                        <span class="status-dot {{ batch_item.batch.status }}"></span>
+                        {{ batch_item.batch.get_status_display }}
+                    </span>
+                </td>
+                <td>
+                    <div class="agent-list">
+                        {% for agent in batch_item.agents_info|slice:":3" %}
+                        <span class="agent-tag-small" title="Agent: {{ agent.name }} | DID: {{ agent.did }}">
+                            <span class="agent-name">{{ agent.name|truncatechars:10 }}</span>
+                            <span class="agent-did">{{ agent.did|truncatechars:12 }}</span>
+                        </span>
+                        {% endfor %}
+                        {% if batch_item.agent_count > 3 %}
+                        <span class="more-agents">+{{ batch_item.agent_count|add:"-3" }} more</span>
+                        {% endif %}
+                        {% if not batch_item.agents_info %}
+                        <span style="color: var(--text-muted); font-size: 0.65rem;">No agents</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <span class="tx-hash-cell" title="{{ batch_item.tx_hash }}">
+                        <i class="fas fa-link me-1" style="font-size: 0.6rem; opacity: 0.5;"></i>
+                        {{ batch_item.tx_hash|truncatechars:18 }}
+                    </span>
+                </td>
+                <td style="color: var(--text-muted); font-size: 0.75rem;">
+                    <i class="far fa-clock me-1"></i> {{ batch_item.batch.created_at|timesince }}
+                </td>
+                <td>
+                    <div class="action-btns">
+                        <!-- VIEW: all data comes from #batchesData, keyed by batch id -->
+                        <button type="button"
+                                class="btn-action js-view-batch"
+                                data-batch-id="{{ batch_item.batch.batch_id }}"
+                                data-bs-toggle="modal"
+                                data-bs-target="#viewBatchModal"
+                                title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+
+                        {% comment %} <button type="button" class="btn-action verify"
+                                onclick="verifyBatch('{{ batch_item.batch.batch_id }}')"
+                                title="Verify Integrity">
+                            <i class="fas fa-shield-alt"></i>
+                        </button> {% endcomment %}
+
+                        {% if batch_item.batch.status == 'pending' %}
+                        <button type="button" class="btn-action anchor"
+                                onclick="anchorBatch('{{ batch_item.batch.batch_id }}')"
+                                title="Anchor to Blockchain">
+                            <i class="fas fa-link"></i>
+                        </button>
+                        {% endif %}
+
+                        {% if batch_item.batch.status == 'failed' %}
+                        <button type="button" class="btn-action anchor"
+                                onclick="retryBatch('{{ batch_item.batch.batch_id }}')"
+                                title="Retry">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                        {% endif %}
+
+                        <button type="button" class="btn-action delete"
+                                onclick="deleteBatch('{{ batch_item.batch.batch_id }}')"
+                                title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- ====== PAGINATION ====== -->
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Showing <strong>{{ page_obj.start_index }}</strong> - <strong>{{ page_obj.end_index }}</strong>
+            of <strong>{{ paginator.count }}</strong> entries
+        </div>
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link" title="First">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link" title="Previous">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% else %}
+            <span class="page-link disabled"><i class="fas fa-angle-double-left"></i></span>
+            <span class="page-link disabled"><i class="fas fa-chevron-left"></i></span>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="page-link active">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">{{ num }}</a>
+                {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                    <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">{{ num }}</a>
+                {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                    <span class="page-link disabled">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link" title="Next">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link" title="Last">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+            {% else %}
+            <span class="page-link disabled"><i class="fas fa-chevron-right"></i></span>
+            <span class="page-link disabled"><i class="fas fa-angle-double-right"></i></span>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-tree"></i>
+        <h4>No Batches Created</h4>
+        <p>Batches are automatically created when enough proofs are submitted. You can also manually create a batch.</p>
+        <button type="button" class="btn-primary" onclick="createBatch()">
+            <i class="fas fa-plus me-2"></i> Create First Batch
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ============================================================ -->
+<!-- ====== VIEW BATCH MODAL ====== -->
+<!-- ============================================================ -->
+<div class="modal fade" id="viewBatchModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-tree"></i> Batch Details - <span id="viewBatchId">—</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                    <span class="status-badge" id="viewBatchStatus">
+                        <span class="status-dot"></span> —
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">
+                        <i class="fas fa-fingerprint me-1"></i> <span id="viewProofCount">0</span> Proofs
+                    </span>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">
+                        <i class="fas fa-robot me-1"></i> <span id="viewAgentCount">0</span> Agents
+                    </span>
+                </div>
+
+                <!-- Integrity banner: shown only when something is off -->
+                <div class="integrity-note warn" id="viewIntegrityNote" style="display: none;">
+                    <i class="fas fa-exclamation-triangle" style="margin-top: 0.1rem;"></i>
+                    <span id="viewIntegrityText"></span>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.02); border-radius: 12px; padding: 1rem;">
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-id-card me-1"></i> Batch ID</span>
+                        <span class="value mono" id="viewBatchIdDetail">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-tree me-1"></i> Merkle Root</span>
+                        <span class="value mono" style="font-size: 0.7rem;" id="viewMerkleRoot">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-calculator me-1"></i> Recomputed Root</span>
+                        <span class="value mono" style="font-size: 0.7rem;" id="viewComputedRoot">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-signature me-1"></i> Aggregated Signature</span>
+                        <span class="value mono" style="font-size: 0.65rem;" id="viewSignature">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-link me-1"></i> Transaction Hash</span>
+                        <span class="value mono" style="font-size: 0.7rem;" id="viewTxHash">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-hashtag me-1"></i> Block Number</span>
+                        <span class="value" id="viewBlockNumber">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-gas-pump me-1"></i> Gas Used</span>
+                        <span class="value" id="viewGasUsed">—</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-robot me-1"></i> Agents with DIDs</span>
+                        <span class="value" id="viewAgentsList">
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">No agents</span>
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-clock me-1"></i> Created</span>
+                        <span class="value" id="viewCreated">—</span>
+                    </div>
+                    <div class="detail-row" style="border-bottom: none;">
+                        <span class="label"><i class="fas fa-clock me-1"></i> Anchored At</span>
+                        <span class="value" id="viewAnchoredAt">—</span>
+                    </div>
+                </div>
+
+                <!-- Merkle Tree Preview -->
+                <div style="margin-top: 1.5rem;">
+                    <h6 style="font-weight: 700; margin-bottom: 0.8rem; font-size: 0.9rem;">
+                        <i class="fas fa-tree me-2" style="color: var(--primary-light);"></i>Merkle Tree Structure
+                    </h6>
+                    <div class="merkle-tree" id="merkleTreeContainer">
+                        <div class="tree-level">
+                            <div class="tree-node root" id="viewRootNode" title="">
+                                🌳 Root: <span id="viewMerkleRootShort">—</span>
+                            </div>
+                        </div>
+                        <!-- No .tree-level class here: this is the column wrapper -->
+                        <div id="merkleTreeLevels"></div>
+                        <div class="tree-label" id="merkleTreeLabel">
+                            Leaf nodes: <span id="viewLeafCount">0</span> proofs
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn-modal-primary" onclick="exportBatch()">
+                    <i class="fas fa-download me-2"></i> Export Batch
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== TOAST CONTAINER ====== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ====== BATCH DATA (safely escaped by Django) ====== -->
+{{ batches_json|json_script:"batchesData" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    // ============ BATCH DATA ============
+    var BATCHES = {};
+    try {
+        var node = document.getElementById('batchesData');
+        if (node) { BATCHES = JSON.parse(node.textContent); }
+    } catch (e) {
+        console.error('Could not parse batch data:', e);
+    }
+
+    // ============ CSRF ============
+    function getCSRFToken() {
+        var m = document.cookie.match('(^|; )csrftoken=([^;]*)');
+        return m ? m[2] : '';
+    }
+
+    function setText(id, value) {
+        var el = document.getElementById(id);
+        if (el) { el.textContent = value; }
+    }
+
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // ============ VIEW BUTTON (delegated) ============
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('.js-view-batch') : null;
+        if (!btn) { return; }
+        var data = BATCHES[btn.getAttribute('data-batch-id')];
+        if (!data) {
+            console.error('No data found for batch', btn.getAttribute('data-batch-id'));
+            showToast('error', 'Could not load details for this batch.');
+            return;
+        }
+        renderBatchModal(data);
+    });
+
+    // ============ FILL THE MODAL ============
+    function renderBatchModal(d) {
+        setText('viewBatchId', d.batch_id);
+        setText('viewBatchIdDetail', d.batch_id);
+        setText('viewMerkleRoot', d.merkle_root || '—');
+        setText('viewComputedRoot', d.computed_root || '—');
+        setText('viewMerkleRootShort', d.merkle_root ? d.merkle_root.slice(0, 10) : '—');
+        setText('viewCreated', d.created || '—');
+        setText('viewAnchoredAt', d.anchored_at || 'Not anchored');
+        setText('viewTxHash', d.tx_hash || 'Pending');
+        setText('viewBlockNumber', d.block_number ? '#' + d.block_number : '—');
+        setText('viewGasUsed', d.gas_used || '—');
+        setText('viewSignature', d.signature ? d.signature.slice(0, 40) + '…' : '—');
+
+        var rootNode = document.getElementById('viewRootNode');
+        if (rootNode) { rootNode.setAttribute('title', d.merkle_root || ''); }
+
+        // Proof count — shows the real number, and the stored one when they differ
+        setText('viewProofCount',
+            d.actual_proofs !== d.declared_proofs
+                ? d.actual_proofs + ' (record says ' + d.declared_proofs + ')'
+                : d.actual_proofs);
+
+        // Status badge
+        var st = document.getElementById('viewBatchStatus');
+        if (st) {
+            var status = d.status || 'pending';
+            st.className = 'status-badge ' + status;
+            st.innerHTML = '<span class="status-dot ' + status + '"></span> ' +
+                escapeHtml(d.status_display || (status.charAt(0).toUpperCase() + status.slice(1)));
+        }
+
+        // Integrity banner
+        var note = document.getElementById('viewIntegrityNote');
+        var problems = [];
+        {% comment %} if (d.actual_proofs !== d.declared_proofs) {
+            problems.push('This batch stores num_proofs = ' + d.declared_proofs +
+                ' but ' + d.actual_proofs + ' proofs are actually attached.');
+        } {% endcomment %}
+        {% comment %} if (d.merkle_root && !d.root_matches) {
+            problems.push('The stored Merkle root does not match a root recomputed from these proofs.');
+        } {% endcomment %}
+        if (note) {
+            if (problems.length) {
+                note.style.display = 'flex';
+                setText('viewIntegrityText', problems.join(' '));
+            } else {
+                note.style.display = 'none';
+            }
+        }
+
+        // Agents
+        var list = document.getElementById('viewAgentsList');
+        var agents = d.agents || [];
+        setText('viewAgentCount', agents.length);
+        if (list) {
+            if (agents.length) {
+                var html = '<div class="agents-list-modal">';
+                agents.forEach(function (a) {
+                    var did = a.did || 'N/A';
+                    html += '<span class="agent-item-modal" title="DID: ' + escapeHtml(did) + '">' +
+                        '<i class="fas fa-robot" style="font-size:0.6rem;opacity:0.6;"></i> ' +
+                        escapeHtml(a.name) +
+                        ' <span class="did">(' + escapeHtml(did.slice(0, 26)) +
+                        (did.length > 26 ? '…' : '') + ')</span></span>';
+                });
+                html += '</div>';
+                list.innerHTML = html;
+            } else {
+                list.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem;">No agents in this batch</span>';
+            }
+        }
+
+        renderMerkleTree(d.levels || [], d.actual_proofs);
+    }
+
+    // ============ MERKLE TREE ============
+    // levels arrives bottom-up from the server: [leaves, ..., [root]]
+    // We render it top-down, skipping the computed root (already shown above).
+    function renderMerkleTree(levels, leafCount) {
+        var box = document.getElementById('merkleTreeLevels');
+        var label = document.getElementById('merkleTreeLabel');
+        if (!box) { return; }
+
+        box.innerHTML = '';
+        setText('viewLeafCount', leafCount || 0);
+
+        if (!levels.length) {
+            box.innerHTML = '<div class="tree-level">' +
+                '<div class="tree-node empty">No proofs in this batch</div></div>';
+            if (label) { label.textContent = 'No proofs to display'; }
+            return;
+        }
+
+        var DISPLAY_LIMIT = 8;
+
+        for (var i = levels.length - 1; i >= 0; i--) {
+            var level = levels[i];
+
+            // Skip the top level when it IS the root and there is more than one
+            // level — the root already has its own node above the tree.
+            if (i === levels.length - 1 && level.length === 1 && levels.length > 1) {
+                continue;
+            }
+
+            var isLeaf = (i === 0);
+            var nodeClass = 'tree-node ' + (isLeaf ? 'leaf' : 'intermediate');
+            var shown = level.slice(0, DISPLAY_LIMIT);
+            var html = '';
+
+            shown.forEach(function (hash, idx) {
+                html += '<div class="' + nodeClass + '" title="' + escapeHtml(hash) + '">' +
+                        escapeHtml(hash.slice(0, 6)) + '</div>';
+                if (idx < shown.length - 1) {
+                    html += '<span class="tree-connector">' + (isLeaf ? '—' : '⟷') + '</span>';
+                }
+            });
+
+            if (level.length > DISPLAY_LIMIT) {
+                html += '<span class="tree-connector">…</span>' +
+                        '<span class="tree-more">+' + (level.length - DISPLAY_LIMIT) + '</span>';
+            }
+
+            var levelDiv = document.createElement('div');
+            levelDiv.className = 'tree-level';
+            levelDiv.innerHTML = html;
+            box.appendChild(levelDiv);
+        }
+
+        if (label) {
+            label.textContent = leafCount + ' leaf node' + (leafCount === 1 ? '' : 's') +
+                ' — hover any node for its full hash';
+        }
+    }
+
+    // ============ ACTIONS ============
+    function postJSON(url, onOk) {
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                showToast('success', data.message);
+                setTimeout(function () { window.location.reload(); }, 1500);
+                if (onOk) { onOk(data); }
+            } else {
+                showToast('error', data.message || 'Request failed.');
+            }
+        })
+        .catch(function () { showToast('error', 'Network error — please try again.'); });
+    }
+
+    window.createBatch = function () {
+        showToast('info', 'Creating batch from pending proofs…');
+        postJSON('/process-batches/');
+    };
+
+    window.anchorBatch = function (batchId) {
+        showToast('info', 'Anchoring ' + batchId + ' to the blockchain…');
+        postJSON('/anchor-batch/' + batchId + '/');
+    };
+
+    window.retryBatch = function (batchId) {
+        showToast('info', 'Retrying ' + batchId + '…');
+        postJSON('/retry-batch/' + batchId + '/');
+    };
+
+    window.deleteBatch = function (batchId) {
+        if (!confirm('Delete batch ' + batchId + '? Its proofs return to the pending pool.')) {
+            return;
+        }
+        showToast('info', 'Deleting ' + batchId + '…');
+        postJSON('/delete-batch/' + batchId + '/');
+    };
+
+    window.verifyBatch = function (batchId) {
+        showToast('info', 'Verifying ' + batchId + '…');
+        fetch('/verify-batch/' + batchId + '/')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    showToast('error', data.message || 'Verification failed.');
+                } else if (data.match && data.count_match) {
+                    showToast('success', batchId + ' verified — Merkle root and proof count both match.');
+                } else if (!data.match) {
+                    showToast('error', batchId + ' failed — recomputed root does not match the stored root.');
+                } else {
+                    showToast('error', batchId + ' — root matches, but the batch records ' +
+                        data.declared_proofs + ' proofs and holds ' + data.actual_proofs + '.');
+                }
+            })
+            .catch(function () { showToast('error', 'Network error — please try again.'); });
+    };
+
+    window.exportBatch = function () {
+        var batchId = document.getElementById('viewBatchId').textContent;
+        var data = BATCHES[batchId];
+        if (!data) { showToast('error', 'Nothing to export.'); return; }
+
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = batchId + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        showToast('success', batchId + ' exported.');
+    };
+
+    // ============ TOAST ============
+    function showToast(type, message) {
+        var container = document.getElementById('toastContainer');
+        if (!container) { return; }
+
+        var icons = { success: '✅', error: '❌', info: 'ℹ️' };
+        var toast = document.createElement('div');
+        toast.className = 'toast-custom ' + type;
+        toast.innerHTML =
+            '<span style="font-size:1.1rem;">' + (icons[type] || 'ℹ️') + '</span>' +
+            '<span>' + escapeHtml(message) + '</span>' +
+            '<button type="button" style="margin-left:auto;background:transparent;border:none;' +
+            'color:var(--text-muted);cursor:pointer;font-size:0.9rem;">' +
+            '<i class="fas fa-times"></i></button>';
+
+        toast.querySelector('button').addEventListener('click', function () { toast.remove(); });
+        container.appendChild(toast);
+
+        setTimeout(function () {
+            if (!toast.parentNode) { return; }
+            toast.style.animation = 'slideOut 0.4s ease forwards';
+            setTimeout(function () { if (toast.parentNode) { toast.remove(); } }, 400);
+        }, 4000);
+    }
+    window.showToast = showToast;
+
+    // ============ AUTO-DISMISS DJANGO MESSAGES ============
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.alert').forEach(function (alert) {
+            setTimeout(function () {
+                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.opacity = '0';
+                setTimeout(function () { if (alert.parentNode) { alert.remove(); } }, 500);
+            }, 3000);
+        });
+    });
+})();
+</script>
+{% endblock %}

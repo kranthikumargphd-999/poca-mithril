@@ -1,0 +1,48 @@
+test_canonical_message_matches_expected_bytes (app.tests.CanonicalPoCATestVectorTests) ... ok
+test_modified_signed_field_invalidates_signature (app.tests.CanonicalPoCATestVectorTests) ... ok
+test_signature_verifies_for_canonical_message (app.tests.CanonicalPoCATestVectorTests) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.029s
+
+OK
+Found 3 test(s).
+Skipping setup of unused database(s): default.
+System check identified no issues (0 silenced).
+
+========== R1.1 TEST VECTOR ==========
+Canonical JSON:
+{"agent_did":"did:secureai:test123","context_hash":"sha256:abc123","model_hash":"sha256:def456","proof_id":"RESP-0001","safety_score":"0.87","timestamp":"2026-10-09T12:30:00+00:00","version":1}
+
+UTF-8 Hex:
+7b226167656e745f646964223a226469643a73656375726561693a74657374313233222c22636f6e746578745f68617368223a227368613235363a616263313233222c226d6f64656c5f68617368223a227368613235363a646566343536222c2270726f6f665f6964223a22524553502d30303031222c227361666574795f73636f7265223a22302e3837222c2274696d657374616d70223a22323032362d31302d30395431323a33303a30302b30303a3030222c2276657273696f6e223a317d
+
+======================================
+
+========== FINAL R1.1 SIGNED TEST VECTOR ==========
+
+Canonical JSON:
+{"agent_did":"did:secureai:af533e027d9d6ccc0958c470c26ea9d9","context_hash":"sha256:abc123","model_hash":"sha256:def456","proof_id":"RESP-0001","safety_score":"0.87","timestamp":"2026-10-09T12:30:00+00:00","version":1}
+
+UTF-8 Hex:
+7b226167656e745f646964223a226469643a73656375726561693a6166353333653032376439643663636330393538633437306332366561396439222c22636f6e746578745f68617368223a227368613235363a616263313233222c226d6f64656c5f68617368223a227368613235363a646566343536222c2270726f6f665f6964223a22524553502d30303031222c227361666574795f73636f7265223a22302e3837222c2274696d657374616d70223a22323032362d31302d30395431323a33303a30302b30303a3030222c2276657273696f6e223a317d
+
+Registered DID:
+did:secureai:af533e027d9d6ccc0958c470c26ea9d9
+
+Public Key:
+79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+
+Signature:
+ccdfa7b470f0150d909e0c6316c90ad8964774a2d9504db0bcdaaeb5bd739cc61d54a1280d40363c3fcc176d2bc52ada9e45153f1c5a890438b71755bf43aca0
+
+Registered Model Hash:
+sha256:def456
+
+Proof Model Hash:
+sha256:def456
+
+Model Hash Match:
+True
+
+===================================================

@@ -1,0 +1,29 @@
+
+R1.1 — LIVE BLOCKCHAIN REGISTRY COMPARISON
+
+Agent ID: AGT-0005
+PoCA Proof ID: PROOF-4B8B497F
+
+Blockchain Registration Records Found: 1
+DID Comparison: MATCH
+Public Key Comparison: MATCH
+Model Hash Comparison: MATCH
+Local PoCA Signature Verification: PASS
+
+Transaction Hash:
+0x3e0f71d1a623ae07235dc063426be96a487f909158cbf0146d8baac031297d0e
+
+Transaction Receipt Status: 1
+Block Number: 44433
+Contract Address Match: True
+Registration Gas Used: 413169
+
+Verification Scope:
+The registration was retrieved from the deployed Ganache contract.
+The identity fields matched the locally stored PoCA agent metadata.
+The existing PoCA signature passed local verification.
+
+Limitation:
+The comparison was performed as a controlled Django-shell experiment.
+Automatic blockchain-registry validation in the production verification
+workflow has not yet been demonstrated.
