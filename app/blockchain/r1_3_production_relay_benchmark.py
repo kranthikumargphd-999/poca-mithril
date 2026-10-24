@@ -1,26 +1,21 @@
 """R1.3 production-relay validation (explicitly opt-in, MUTATES DB AND GANACHE).
-
 Place at app/blockchain/r1_3_production_relay_benchmark.py and run from project root:
-  python -m app.blockchain.r1_3_production_relay_benchmark --agent-id AGT-0005 --user-id 1
-  python -m app.blockchain.r1_3_production_relay_benchmark --agent-id AGT-0005 --user-id 1 --execute
-
+python -m app.blockchain.r1_3_production_relay_benchmark --agent-id AGT-0005 --user-id 1
+python -m app.blockchain.r1_3_production_relay_benchmark --agent-id AGT-0005 --user-id 1 --execute
 Run ONLY on a backup/isolated clone of your SQLite database and local Ganache state.
 Requires a pre-existing agent whose keys match exactly one live blockchain
 agent_registration record; the code does not register or modify an agent.
-
 Every trial generates and formally accepts five *valid, actual ECDSA-signed* PoCA database rows.
 Both arms use the SAME five proofs and signed metadata. Baseline performs
-production-equivalent double live-registry verification and one-proof Merkle
+two-phase snapshot-based live-registry verification and one-proof Merkle
 hash/digest, then issues five Store.sol transactions. Relay executes the
-UNMODIFIED MithrilBatchProcessor.process_pending_batches() entry point, including
+production MithrilBatchProcessor.process_pending_batches() entry point, including
 DB reservation, live verification, Merkle aggregation, batching, and persistence.
-
-The two arms intentionally use the SAME `mithril_batch` payload FIELD SCHEMA,
+The two arms intentionally use the SAME mithril_batch payload FIELD SCHEMA,
 but their roots, counts, IDs, and actual ABI calldata differ (1 vs 5 proofs).
 The comparison measures a production-relay workflow against a carefully aligned
 single-proof baseline, NOT a proof of byte-for-byte identical calldata.
-
-Outputs r1_3_production_relay_results.csv (NEW file) and one console summary.
+Outputs r1_3_production_relay_results_revised.csv (NEW file) and one console summary.
 Production stage timings are captured from the existing R13_TIMING instrumentation.
 NOTE: completion latencies start with pre-generated, already-signed proofs; no AI
 response creation or signing latency is included. Queue wait includes proof age
@@ -31,7 +26,6 @@ blockchain writes are irreversible; use your isolated snapshot to roll back.
 import argparse
 import base64
 import csv
-import hashlib
 import json
 import statistics
 import time
@@ -42,23 +36,26 @@ import os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "secureAI.settings")
 import django
 django.setup()
-
 from django.utils import timezone
-
 from app.models import Agent, PoCAProof, Users
 from app.crypto_utils import (
     generate_context_hash, generate_signature, generate_did,
-    verify_poca_signature_onchain, build_merkle_tree,
+    build_merkle_tree,
     generate_aggregated_signature,
+    verify_poca_signature_with_registry
 )
 from app.batch_processor import MithrilBatchProcessor
 from app.proof_acceptance import accept_poca_proof
 import app.batch_processor as batch_module
-from app.blockchain.logic import web3, contract_file, DEFAULT_ACCOUNT, addNewData, retrieveData
+from app.blockchain.logic import web3, contract_file, addNewData, retrieveData
 
-TRIALS = 3
+TRIALS = 30
 BATCH_SIZE = 5
-OUT = Path(__file__).with_name('r1_3_production_relay_results.csv')
+
+WORKER_COUNT = 1
+ARRIVAL_INTERVAL_SECONDS = 0.0
+
+OUT = Path(__file__).with_name('r1_3_production_relay_results_revised.csv')
 TIMING_FILE = Path(__file__).resolve().parents[2] / 'reproducibility' / 'r1_3_component_timings.csv'
 
 
@@ -67,8 +64,8 @@ def ensure_agent_registration(agent):
     if not isinstance(registrations, list):
         raise RuntimeError('Could not retrieve live blockchain registry')
     matches = [r for r in registrations if isinstance(r, dict)
-               and r.get('type') == 'agent_registration'
-               and r.get('agent_id') == agent.agent_id]
+            and r.get('type') == 'agent_registration'
+            and r.get('agent_id') == agent.agent_id]
     if len(matches) != 1:
         raise RuntimeError(f'Expected exactly one registration for {agent.agent_id}; found {len(matches)}')
     r = matches[0]
@@ -82,7 +79,7 @@ def make_signed_proofs(agent, user, trial):
     """Create persisted, uniquely identified records. No AI API call is needed."""
     records = []
     for index in range(BATCH_SIZE):
-        # proof_id max_length=20; use 8 UUID hex characters and a short prefix.
+        # proof_id max_length=20; use 8 UUID hex characters and a short prefix.*
         proof_id = 'R13-' + uuid.uuid4().hex[:12].upper()
         query = f'R1.3 production benchmark trial {trial}, item {index + 1}'
         when = timezone.now()
@@ -104,8 +101,8 @@ def make_signed_proofs(agent, user, trial):
             safety_score=safety, attestation_timestamp=when, signature=signature,
             is_batched=False,
         )
-        # Route the fixture through the same cryptographic acceptance gate
-        # used by submit_query_view. Do not fabricate accepted_at timestamps.
+        # Route the fixture through the same cryptographic acceptance gate*
+        # used by submit_query_view. Do not fabricate accepted_at timestamps.*
         accepted, status = accept_poca_proof(proof.proof_id)
         if not accepted:
             raise RuntimeError(
@@ -148,33 +145,44 @@ def details_for_transaction(tx_hash, stored_obj):
 
 
 def individual_arm(proofs):
-    """Five verified one-proof summary anchors; no DB 'batch' mutation."""
+    """Sequential individual anchors; same two registry-read phases as relay.
+    Identical pre-signed proof input; one worker; all five are ready at start.
+    The completion clock begins when the individual arm starts. Initial and
+    recheck registry reads are timed and counted in the verification total.
+    """
     started = time.perf_counter()
-    gas = []
-    completions = []
-    calldata_bytes = []
-    encoded_bytes = []
-    hashes = []
-    verify_seconds = 0.0
+    gas, completions, calldata_bytes, encoded_bytes, hashes = [], [], [], [], []
     hashing_seconds = 0.0
     chain_seconds = 0.0
+    initial_start = time.perf_counter()
+    initial_registry = retrieveData()
+    if not isinstance(initial_registry, list):
+        raise RuntimeError('Initial blockchain registry retrieval failed')
     for proof in proofs:
-        # Production verifies twice: reservation and immediately before anchor.
-        before = time.perf_counter()
-        if not verify_poca_signature_onchain(proof):
-            raise RuntimeError(f'Live-registry proof verification failed: {proof.proof_id}')
-        verify_seconds += time.perf_counter() - before
+        if not proof.signature or not verify_poca_signature_with_registry(proof, initial_registry):
+            raise RuntimeError(f'Initial live verification failed: {proof.proof_id}')
+    initial_verify_seconds = time.perf_counter() - initial_start
+    prepared = []
+    for proof in proofs:
         before = time.perf_counter()
         payload = build_single_payload(proof)
         hashing_seconds += time.perf_counter() - before
-        before = time.perf_counter()
-        if not verify_poca_signature_onchain(proof):
+        prepared.append((proof, payload))
+    # Fresh blockchain state at second-phase start, BEFORE any individual
+    # anchoring. Exactly two full-registry reads, like the production relay.
+    recheck_start = time.perf_counter()
+    recheck_registry = retrieveData()
+    if not isinstance(recheck_registry, list):
+        raise RuntimeError('Second blockchain registry retrieval failed')
+    for proof in proofs:
+        if not proof.signature or not verify_poca_signature_with_registry(proof, recheck_registry):
             raise RuntimeError(f'Second live verification failed: {proof.proof_id}')
-        verify_seconds += time.perf_counter() - before
+    recheck_verify_seconds = time.perf_counter() - recheck_start
+    for proof, payload in prepared:
         before = time.perf_counter()
         result = addNewData(payload)
         chain_seconds += time.perf_counter() - before
-        if not result['success']:
+        if not result.get('success'):
             raise RuntimeError(f'Individual anchor failure: {result}')
         gas.append(int(result['gas_used']))
         hashes.append(result['tx_hash'])
@@ -182,22 +190,22 @@ def individual_arm(proofs):
         calldata_bytes.append(cbytes)
         encoded_bytes.append(ebytes)
         completions.append(time.perf_counter() - started)
-    elapsed = completions[-1]
+    elapsed = time.perf_counter() - started
     return {
         'transactions': len(hashes),
         'total_gas': sum(gas),
         'total_calldata_bytes': sum(calldata_bytes),
         'total_encoded_app_bytes': sum(encoded_bytes),
         'mean_proof_completion_ms': statistics.mean(completions) * 1000,
-        'last_proof_completion_ms': elapsed * 1000,
+        'last_proof_completion_ms': completions[-1] * 1000,
         'elapsed_s': elapsed,
         'throughput_proofs_s': len(proofs) / elapsed,
-        'verify_ms': verify_seconds * 1000,
+        'verify_ms': (initial_verify_seconds + recheck_verify_seconds) * 1000,
         'merkle_and_digest_ms': hashing_seconds * 1000,
         'chain_receipt_ms': chain_seconds * 1000,
         'queue_wait_ms': '',
-        'verification_initial_ms': '',
-        'verification_recheck_ms': '',
+        'verification_initial_ms': initial_verify_seconds * 1000,
+        'verification_recheck_ms': recheck_verify_seconds * 1000,
         'merkle_initial_ms': '',
         'merkle_recheck_ms': '',
         'transaction_hashes': ';'.join(hashes),
@@ -209,14 +217,12 @@ def record_production_anchor():
     """Wrap module's addNewData reference WITHOUT replacing production logic."""
     original = batch_module.addNewData
     captured = []
-
     def capture(payload):
         begun = time.perf_counter()
         outcome = original(payload)
         duration = time.perf_counter() - begun
         captured.append((payload, outcome, duration))
         return outcome
-
     batch_module.addNewData = capture
     try:
         yield captured
@@ -227,12 +233,11 @@ def record_production_anchor():
 def relay_arm(proofs):
     """Run actual process_pending_batches, DB reservation and anchor_batch."""
     ids = {p.pk for p in proofs}
-    pending_ids = set(MithrilBatchProcessor.get_pending_proofs(limit=BATCH_SIZE)
-                      .values_list('pk', flat=True))
+    pending_ids = set(MithrilBatchProcessor.get_pending_proofs(limit=BATCH_SIZE).values_list('pk', flat=True))
     if pending_ids != ids:
         raise RuntimeError('Pending queue differs from the five intended benchmark proofs')
-    # The production processor already logs fine-grained stages when R13_TIMING=1.
-    # Capture the appended rows from THIS run only; never mix historical measurements.
+    # The production processor already logs fine-grained stages when R13_TIMING=1.*
+    # Capture the appended rows from THIS run only; never mix historical measurements.*
     log_offset = TIMING_FILE.stat().st_size if TIMING_FILE.exists() else 0
     started = time.perf_counter()
     with record_production_anchor() as captures:
@@ -252,13 +257,13 @@ def relay_arm(proofs):
             f.seek(log_offset)
             for line in f:
                 cells = next(csv.reader([line]), [])
-                # Instrumentation schema: timestamp, process_id, batch_id, metric, duration_ms
+                # Instrumentation schema: timestamp, process_id, batch_id, metric, duration_ms*
                 if len(cells) == 5 and cells[1] == str(os.getpid()):
                     try:
                         recorded.setdefault(cells[3], []).append(float(cells[4]))
                     except ValueError:
                         pass
-    # Stage values are measurements of the original production code, not reconstructed estimates.
+    # Stage values are measurements of the original production code, not reconstructed estimates.*
     stage = lambda name: round(sum(recorded[name]), 4) if name in recorded else ''
     return {
         'transactions': 1,
@@ -270,9 +275,9 @@ def relay_arm(proofs):
         'elapsed_s': elapsed,
         'throughput_proofs_s': len(proofs) / elapsed,
         'verify_ms': (round(sum(recorded.get('initial_verification', []) + recorded.get('reverification', [])), 4)
-                      if 'initial_verification' in recorded and 'reverification' in recorded else ''),
+                    if 'initial_verification' in recorded and 'reverification' in recorded else ''),
         'merkle_and_digest_ms': (round(sum(recorded.get('merkle_construction', []) + recorded.get('merkle_recheck', [])), 4)
-                                 if 'merkle_construction' in recorded and 'merkle_recheck' in recorded else ''),
+                                if 'merkle_construction' in recorded and 'merkle_recheck' in recorded else ''),
         'queue_wait_ms': stage('mean_queue_wait'),
         'verification_initial_ms': stage('initial_verification'),
         'verification_recheck_ms': stage('reverification'),
@@ -290,10 +295,19 @@ def main():
     parser.add_argument('--execute', action='store_true', help='EXPLICIT consent to write DB + Ganache')
     args = parser.parse_args()
     if not args.execute:
-        print('DRY RUN. NO DATABASE OR BLOCKCHAIN CHANGES.')
-        print('This will create and accept 15 signed PoCAProof records, 3 production batches and 18 anchor transactions.')
-        print('Back up SQLite and Ganache first; rerun with --execute on an isolated clone.')
+        print("DRY RUN. NO DATABASE OR BLOCKCHAIN CHANGES.")
+        total_proofs = TRIALS * BATCH_SIZE
+        total_batches = TRIALS
+        total_transactions = TRIALS * (BATCH_SIZE + 1)
+        print(f"Trials: {TRIALS}")
+        print(f"Proofs per trial: {BATCH_SIZE}")
+        print(f"Total signed proofs: {total_proofs}")
+        print(f"Total batches: {total_batches}")
+        print(f"Total blockchain transactions: {total_transactions}")
+        print("Use isolated SQLite and Ganache backups.")
         return
+    if WORKER_COUNT != 1 or ARRIVAL_INTERVAL_SECONDS != 0.0:
+        raise RuntimeError('This implementation supports only one worker and simultaneous-ready proofs')
     os.environ['R13_TIMING'] = '1'  # Enable existing production stage logging.
     if not web3.is_connected() or not web3.eth.get_code(contract_file.address):
         raise RuntimeError('Ganache missing or Store.sol not deployed at configured address')
@@ -305,7 +319,7 @@ def main():
     if MithrilBatchProcessor.get_pending_count() != 0:
         raise RuntimeError('Cannot run production relay benchmark with existing pending proofs. Use isolated database.')
     print('Executing REAL production relay vs verified five-transaction baseline')
-    print('Pre-generated proof comparison: AI generation, PoCA creation/signing, and production arrival scheduling are excluded.')
+    print('Pre-generated, simultaneously ready proof comparison: AI generation, signing and live arrival scheduling excluded.')
     print('Store.sol', contract_file.address, 'chain', web3.eth.chain_id)
     rows = []
     for trial in range(1, TRIALS + 1):
@@ -313,16 +327,18 @@ def main():
             raise RuntimeError('Pending records unexpectedly exist between trials')
         proofs = make_signed_proofs(agent, user, trial)
         proof_ids = ';'.join(p.proof_id for p in proofs)
-        # Alternate order. Relay-first leaves is_batched=True but baseline
+        # Alternate order. Relay-first leaves is_batched=True but baseline*
         # still verifies exactly the SAME immutable cryptographic fields.
         order = ('individual_verified', 'production_relay') if trial % 2 else ('production_relay', 'individual_verified')
         for mode in order:
             result = individual_arm(proofs) if mode == 'individual_verified' else relay_arm(proofs)
             rows.append({'trial': trial, 'mode': mode, 'proof_count': BATCH_SIZE,
+                        'worker_count': WORKER_COUNT,
+                        'arrival_interval_s': ARRIVAL_INTERVAL_SECONDS,
                          'proof_ids': proof_ids, **result})
             print('trial', trial, 'mode', mode, 'gas', result['total_gas'],
-                  'throughput', round(result['throughput_proofs_s'], 3),
-                  'calldata_bytes', result['total_calldata_bytes'])
+                'throughput', round(result['throughput_proofs_s'], 3),
+                'calldata_bytes', result['total_calldata_bytes'])
     with OUT.open('w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=list(rows[0]))
         writer.writeheader()
@@ -331,12 +347,11 @@ def main():
     for mode in ('individual_verified', 'production_relay'):
         runs = [r for r in rows if r['mode'] == mode]
         print(mode, 'mean_gas_per_proof=', round(statistics.mean(r['total_gas'] / BATCH_SIZE for r in runs), 2),
-              'mean_throughput=', round(statistics.mean(r['throughput_proofs_s'] for r in runs), 3),
-              'mean_completion_ms=', round(statistics.mean(r['mean_proof_completion_ms'] for r in runs), 3),
-              'mean_calldata_bytes=', round(statistics.mean(r['total_calldata_bytes'] for r in runs), 1))
+            'mean_throughput=', round(statistics.mean(r['throughput_proofs_s'] for r in runs), 3),
+            'mean_completion_ms=', round(statistics.mean(r['mean_proof_completion_ms'] for r in runs), 3),
+            'mean_calldata_bytes=', round(statistics.mean(r['total_calldata_bytes'] for r in runs), 1))
     print('IMPORTANT: Same PoCA proofs and payload field schema; calldata content/length remains different.')
     print('Baseline is production-EQUIVALENT verification; relay is actual unmodified production entry point.')
-
 
 if __name__ == '__main__':
     main()
