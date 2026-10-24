@@ -1,0 +1,1026 @@
+{% extends 'base.html' %}
+
+{% block title %}Available Agents{% endblock %}
+
+{% block page_title %}Available AI Agents{% endblock %}
+{% block page_subtitle %}Browse and interact with available AI agents on the SecureAI platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ============ STATS BAR ============ */
+    .stats-mini-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stats-mini-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stats-mini-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-warm), var(--primary-light));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .stats-mini-item:hover::before {
+        opacity: 1;
+    }
+
+    .stats-mini-item:hover {
+        border-color: rgba(217, 155, 127, 0.3);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .stats-mini-item .number {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--primary-light);
+        display: block;
+    }
+
+    .stats-mini-item .label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: block;
+        margin-top: 0.2rem;
+    }
+
+    .stats-mini-item .icon {
+        font-size: 1.2rem;
+        margin-right: 0.3rem;
+    }
+
+    .stats-mini-item .trend {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 0.15rem 0.6rem;
+        border-radius: 50px;
+        margin-top: 0.3rem;
+    }
+
+    .trend.up {
+        color: #34d399;
+        background: rgba(52, 211, 153, 0.1);
+    }
+
+    .trend.down {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.1);
+    }
+
+    /* ============ FILTER SECTION ============ */
+    .filter-section {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 1.2rem 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .filter-section:hover {
+        border-color: rgba(217, 155, 127, 0.15);
+    }
+
+    .filter-section .filter-label {
+        color: var(--text-muted);
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+
+    .filter-section .filter-control {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        width: 100%;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .filter-section .filter-control:focus {
+        border-color: var(--primary-light);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(217, 155, 127, 0.08);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .filter-section .filter-control option {
+        background: var(--primary-dark);
+        color: var(--text-light);
+        padding: 0.3rem;
+    }
+
+    .btn-filter {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.6rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-reset {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.6rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-reset:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    /* ============ AGENT CARDS ============ */
+    .agent-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        height: 100%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .agent-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(217, 155, 127, 0.3);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .agent-card .agent-emoji {
+        font-size: 2.8rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .agent-card .agent-name {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 0.2rem;
+        color: var(--text-light);
+    }
+
+    .agent-card .agent-id {
+        font-family: monospace;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+        opacity: 0.7;
+    }
+
+    .agent-card .agent-description {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        flex: 1;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .agent-card .agent-tags {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .agent-card .agent-tags .tag {
+        background: rgba(217, 155, 127, 0.08);
+        border: 1px solid rgba(217, 155, 127, 0.1);
+        padding: 0.15rem 0.6rem;
+        border-radius: 50px;
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .agent-card .agent-tags .tag:hover {
+        background: rgba(217, 155, 127, 0.15);
+        border-color: rgba(217, 155, 127, 0.2);
+    }
+
+    .agent-card .agent-tags .tag.on-chain {
+        background: rgba(52, 211, 153, 0.08);
+        border-color: rgba(52, 211, 153, 0.1);
+        color: #34d399;
+    }
+
+    .agent-card .agent-tags .tag.on-chain:hover {
+        background: rgba(52, 211, 153, 0.15);
+        border-color: rgba(52, 211, 153, 0.2);
+    }
+
+    .agent-card .agent-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 0.8rem;
+        border-top: 1px solid var(--border-color);
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: auto;
+    }
+
+    .agent-card .agent-footer .agent-status {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        color: #34d399;
+        font-weight: 500;
+    }
+
+    .agent-card .agent-footer .agent-status .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #34d399;
+        display: inline-block;
+        animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+
+    .agent-card .agent-footer .agent-stats {
+        display: flex;
+        gap: 0.8rem;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+
+    .agent-card .agent-footer .agent-stats span {
+        display: flex;
+        align-items: center;
+        gap: 0.2rem;
+    }
+
+    .agent-card .agent-footer .agent-stats .stat-value {
+        color: var(--primary-light);
+        font-weight: 600;
+    }
+
+    .agent-card .card-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.8rem;
+    }
+
+    /* ============ QUERY BUTTON ============ */
+    .btn-query-agent {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.5rem 1.2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        text-decoration: none;
+        flex: 1;
+        justify-content: center;
+    }
+
+    .btn-query-agent:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-view-details {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.5rem 1.2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        text-decoration: none;
+        flex: 0.5;
+        justify-content: center;
+    }
+
+    .btn-view-details:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+        transform: translateY(-2px);
+    }
+
+    /* ============ MODAL ============ */
+    .modal-content {
+        background: #1a2a3a;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        color: var(--text-light);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.2rem 1.8rem;
+    }
+
+    .modal-header .modal-title {
+        font-weight: 700;
+        color: var(--text-light);
+        font-size: 1.2rem;
+    }
+
+    .modal-header .modal-title i {
+        color: var(--primary-light);
+        margin-right: 0.5rem;
+    }
+
+    .modal-header .btn-close {
+        filter: invert(1);
+        opacity: 0.6;
+        transition: all 0.3s ease;
+    }
+
+    .modal-header .btn-close:hover {
+        opacity: 1;
+    }
+
+    .modal-body {
+        padding: 1.8rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 1rem 1.8rem;
+    }
+
+    .btn-modal-primary {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.6rem 1.8rem;
+        border-radius: 10px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-modal-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-modal-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.6rem 1.8rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .btn-modal-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    /* ============ DETAIL ROW ============ */
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        font-size: 0.85rem;
+    }
+
+    .detail-row .label {
+        color: var(--text-muted);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .detail-row .value {
+        color: var(--text-light);
+        font-weight: 500;
+        text-align: right;
+        word-break: break-all;
+        max-width: 60%;
+    }
+
+    .detail-row .value.mono {
+        font-family: monospace;
+        font-size: 0.75rem;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .agent-profile-preview {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .agent-profile-preview .emoji-large {
+        font-size: 3.5rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .agent-profile-preview h4 {
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .agent-profile-preview .badge-group {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+
+    .agent-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        background: rgba(217, 155, 127, 0.08);
+        border: 1px solid rgba(217, 155, 127, 0.1);
+        color: var(--text-muted);
+    }
+
+    /* ============ EMPTY STATE ============ */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--primary-light);
+        opacity: 0.2;
+        margin-bottom: 1.5rem;
+    }
+
+    .empty-state h4 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: var(--text-muted);
+        max-width: 400px;
+        margin: 0 auto 1.5rem;
+        line-height: 1.6;
+    }
+
+    .empty-state .btn-primary {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.8rem 2rem;
+        border-radius: 12px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .empty-state .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    /* ============ TOAST ============ */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+
+    .toast-custom {
+        background: #1a2a3a;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+        min-width: 300px;
+        animation: slideIn 0.4s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .toast-custom.success {
+        border-left: 4px solid #34d399;
+    }
+
+    .toast-custom.error {
+        border-left: 4px solid #f87171;
+    }
+
+    .toast-custom.info {
+        border-left: 4px solid #60a5fa;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 768px) {
+        .filter-section .row > div {
+            margin-bottom: 0.8rem;
+        }
+        
+        .filter-section .row > div:last-child {
+            margin-bottom: 0;
+        }
+
+        .stats-mini-bar {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .agent-card .agent-footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .agent-card .agent-footer .agent-stats {
+            justify-content: center;
+        }
+
+        .modal-body {
+            padding: 1rem;
+        }
+
+        .detail-row {
+            flex-direction: column;
+            padding: 0.4rem 0;
+        }
+
+        .detail-row .value {
+            text-align: left;
+            max-width: 100%;
+            margin-top: 0.2rem;
+        }
+
+        .agent-card .card-actions {
+            flex-direction: column;
+        }
+
+        .btn-view-details {
+            flex: 1;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .stats-mini-bar {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .agent-card .agent-emoji {
+            font-size: 2.2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ====== STATS MINI BAR ====== -->
+<div class="stats-mini-bar">
+    <div class="stats-mini-item">
+        <span class="number">{{ total_agents|default:0 }}</span>
+        <span class="label"><i class="fas fa-robot icon" style="color: var(--primary-light);"></i> Available Agents</span>
+        <span class="trend up"><i class="fas fa-arrow-up"></i> Active</span>
+    </div>
+    <div class="stats-mini-item">
+        <span class="number">{{ total_providers|default:0 }}</span>
+        <span class="label"><i class="fas fa-cube icon" style="color: #60a5fa;"></i> Providers</span>
+        <span class="trend up"><i class="fas fa-check-circle"></i> Integrated</span>
+    </div>
+    <div class="stats-mini-item">
+        <span class="number">{{ avg_verification_rate|default:0 }}%</span>
+        <span class="label"><i class="fas fa-shield-alt icon" style="color: #34d399;"></i> Avg Verification Rate</span>
+        <span class="trend up"><i class="fas fa-arrow-up"></i> Secure</span>
+    </div>
+    <div class="stats-mini-item">
+        <span class="number">{{ total_agents|default:0 }}</span>
+        <span class="label"><i class="fas fa-link icon" style="color: #34d399;"></i> On-Chain Registered</span>
+        <span class="trend up"><i class="fas fa-check-circle"></i> Verified</span>
+    </div>
+</div>
+
+<!-- ====== FILTER SECTION ====== -->
+<div class="filter-section">
+    <form method="GET" action="{% url 'available_agents' %}" class="row align-items-end">
+        <div class="col-md-3 col-sm-6">
+            <div class="filter-label"><i class="fas fa-search me-1"></i> Search</div>
+            <input type="text" name="search" class="filter-control" placeholder="Search agents..." value="{{ search|default:'' }}">
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="filter-label"><i class="fas fa-cube me-1"></i> Provider</div>
+            <select name="provider" class="filter-control">
+                <option value="">All Providers</option>
+                <option value="openai" {% if provider_filter == 'openai' %}selected{% endif %}>OpenAI</option>
+                <option value="groq" {% if provider_filter == 'groq' %}selected{% endif %}>Groq</option>
+                <option value="huggingface" {% if provider_filter == 'huggingface' %}selected{% endif %}>Hugging Face</option>
+                <option value="ollama" {% if provider_filter == 'ollama' %}selected{% endif %}>Ollama (Local)</option>
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <div class="filter-label"><i class="fas fa-tag me-1"></i> Category</div>
+            <select name="category" class="filter-control">
+                <option value="">All Categories</option>
+                <option value="medical" {% if category_filter == 'medical' %}selected{% endif %}>🏥 Medical</option>
+                <option value="code" {% if category_filter == 'code' %}selected{% endif %}>💻 Code</option>
+                <option value="data" {% if category_filter == 'data' %}selected{% endif %}>📊 Data</option>
+                <option value="legal" {% if category_filter == 'legal' %}selected{% endif %}>⚖️ Legal</option>
+                <option value="finance" {% if category_filter == 'finance' %}selected{% endif %}>💰 Finance</option>
+                <option value="general" {% if category_filter == 'general' %}selected{% endif %}>🔹 General</option>
+            </select>
+        </div>
+        <div class="col-md-4 col-sm-12">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn-filter">
+                    <i class="fas fa-search me-2"></i> Filter
+                </button>
+                <a href="{% url 'available_agents' %}" class="btn-reset">
+                    <i class="fas fa-undo me-2"></i> Reset
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ====== AGENTS GRID ====== -->
+{% if agents %}
+<div class="row g-4">
+    {% for agent in agents %}
+    <div class="col-xl-4 col-lg-6 col-md-6">
+        <div class="agent-card">
+            <!-- Dynamic Emoji based on provider/name -->
+            <span class="agent-emoji">
+                {% if 'medical' in agent.name|lower or 'health' in agent.description|lower %}
+                    🏥
+                {% elif 'code' in agent.name|lower or 'review' in agent.description|lower %}
+                    💻
+                {% elif 'data' in agent.name|lower or 'analytics' in agent.description|lower %}
+                    📊
+                {% elif 'legal' in agent.name|lower or 'law' in agent.description|lower %}
+                    ⚖️
+                {% elif 'finance' in agent.name|lower or 'investment' in agent.description|lower %}
+                    💰
+                {% else %}
+                    🤖
+                {% endif %}
+            </span>
+            <div class="agent-name">{{ agent.name }}</div>
+            <div class="agent-id">{{ agent.agent_id }}</div>
+            <div class="agent-description">
+                {{ agent.description|default:"No description provided"|truncatechars:120 }}
+            </div>
+            <div class="agent-tags">
+                <span class="tag">🧠 {{ agent.model_name }}</span>
+                <span class="tag">{{ agent.get_llm_provider_display }}</span>
+                {% if agent.registration_tx_hash %}
+                <span class="tag on-chain"><i class="fas fa-link"></i> On-Chain</span>
+                {% endif %}
+            </div>
+            <div class="agent-footer">
+                <div class="agent-status">
+                    <span class="dot"></span> {{ agent.get_status_display }}
+                </div>
+                <div class="agent-stats">
+                    <span><i class="fas fa-fingerprint"></i> <span class="stat-value">{{ agent.proof_count|default:0 }}</span> proofs</span>
+                    <span><i class="fas fa-check-circle" style="color: #34d399;"></i> {{ agent.verification_rate|default:0 }}%</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'submit_query' %}?agent={{ agent.id }}" class="btn-query-agent">
+                    <i class="fas fa-paper-plane"></i> Query Agent
+                </a>
+                <button class="btn-view-details" data-bs-toggle="modal" data-bs-target="#agentDetailModal" 
+                        onclick="viewAgentDetails(
+                            '{{ agent.name }}',
+                            '{{ agent.agent_id }}',
+                            '{{ agent.get_llm_provider_display }}',
+                            '{{ agent.model_name }}',
+                            '{{ agent.description|escapejs }}',
+                            '{{ agent.did }}',
+                            '{{ agent.registration_tx_hash|default:"Not registered" }}',
+                            '{{ agent.proof_count|default:0 }}',
+                            '{{ agent.verification_rate|default:0 }}',
+                            '{{ agent.get_status_display }}'
+                        )">
+                    <i class="fas fa-info-circle"></i> Info
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="empty-state">
+    <i class="fas fa-robot"></i>
+    <h4>No Agents Available</h4>
+    <p>There are currently no AI agents available. Please check back later or contact the administrator.</p>
+    <a href="{% url 'user_dashboard' %}" class="btn-primary">
+        <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+    </a>
+</div>
+{% endif %}
+
+<!-- ============================================================ -->
+<!-- ====== AGENT DETAIL MODAL ====== -->
+<!-- ============================================================ -->
+<div class="modal fade" id="agentDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-robot"></i> Agent Details - <span id="agentDetailName">Agent Name</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="agent-profile-preview">
+                    <span class="emoji-large" id="agentDetailEmoji">🤖</span>
+                    <h4 id="agentDetailNameTitle">Agent Name</h4>
+                    <div class="badge-group">
+                        <span class="agent-tag" id="agentDetailProvider">
+                            <span>🧠</span> Provider
+                        </span>
+                        <span class="agent-tag" id="agentDetailModel" style="margin-left: 0.5rem;">
+                            <span>📦</span> Model
+                        </span>
+                        <span class="status-badge active" style="margin-left: 0.5rem; background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.15);" id="agentDetailStatus">
+                            <span class="status-dot active"></span> Active
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Agent Info -->
+                <div style="background: rgba(255,255,255,0.02); border-radius: 12px; padding: 1rem;">
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-id-card me-1"></i> Agent ID</span>
+                        <span class="value mono" id="agentDetailId">AGT-0001</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-fingerprint me-1"></i> DID</span>
+                        <span class="value mono" style="font-size: 0.7rem;" id="agentDetailDID">did:secureai:...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-brain me-1"></i> Model</span>
+                        <span class="value" id="agentDetailModelValue">Model</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-cube me-1"></i> Provider</span>
+                        <span class="value" id="agentDetailProviderValue">Provider</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-link me-1"></i> Registration Tx</span>
+                        <span class="value mono" style="font-size: 0.7rem;" id="agentDetailTx">Not registered</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label"><i class="fas fa-fingerprint me-1"></i> Total Proofs</span>
+                        <span class="value" id="agentDetailProofs">0</span>
+                    </div>
+                    <div class="detail-row" style="border-bottom: none;">
+                        <span class="label"><i class="fas fa-shield-alt me-1"></i> Verification Rate</span>
+                        <span class="value" style="color: #34d399; font-weight: 600;" id="agentDetailRate">0%</span>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div style="margin-top: 1.5rem; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 1rem;">
+                    <div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.3rem;">
+                        <i class="fas fa-align-left me-1"></i> Description
+                    </div>
+                    <div style="color: var(--text-light); font-size: 0.95rem; line-height: 1.6;" id="agentDetailDescription">
+                        No description provided.
+                    </div>
+                </div>
+
+                <!-- Blockchain Info -->
+                <div style="margin-top: 1rem; background: rgba(52, 211, 153, 0.05); border: 1px solid rgba(52, 211, 153, 0.1); border-radius: 10px; padding: 0.8rem 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <i class="fas fa-shield-alt" style="color: #34d399; font-size: 1.2rem;"></i>
+                        <div>
+                            <div style="font-weight: 600; color: #34d399;">Blockchain Verified</div>
+                            <div style="color: var(--text-muted); font-size: 0.85rem;">
+                                This agent is registered on-chain with DID and public key for verifiable identity
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn-modal-primary" onclick="queryAgentModal()">
+                    <i class="fas fa-paper-plane me-2"></i> Query This Agent
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ====== TOAST CONTAINER ====== -->
+<!-- ============================================================ -->
+<div class="toast-container" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ============ QUERY AGENT ============
+    function queryAgent(agentName) {
+        showToast('info', '🔄 Opening query interface for ' + agentName + '...');
+        setTimeout(function() {
+            showToast('success', ' Ready to query ' + agentName + '! Redirecting...');
+            window.location.href = "{% url 'submit_query' %}?agent=" + encodeURIComponent(agentName);
+        }, 1500);
+    }
+
+    function queryAgentModal() {
+        const agentName = document.getElementById('agentDetailName').textContent;
+        queryAgent(agentName);
+    }
+
+    // ============ VIEW AGENT DETAILS ============
+    function viewAgentDetails(name, id, provider, model, description, did, tx, proofs, rate, status) {
+        // Set emoji based on name/description
+        let emoji = '🤖';
+        const nameLower = name.toLowerCase();
+        const descLower = description.toLowerCase();
+        
+        if (nameLower.includes('medical') || descLower.includes('medical') || descLower.includes('health')) {
+            emoji = '🏥';
+        } else if (nameLower.includes('code') || descLower.includes('code') || descLower.includes('review')) {
+            emoji = '💻';
+        } else if (nameLower.includes('data') || descLower.includes('data') || descLower.includes('analytics')) {
+            emoji = '📊';
+        } else if (nameLower.includes('legal') || descLower.includes('legal') || descLower.includes('law')) {
+            emoji = '⚖️';
+        } else if (nameLower.includes('finance') || descLower.includes('finance') || descLower.includes('investment')) {
+            emoji = '💰';
+        }
+        
+        document.getElementById('agentDetailEmoji').textContent = emoji;
+        document.getElementById('agentDetailName').textContent = name;
+        document.getElementById('agentDetailNameTitle').textContent = name;
+        document.getElementById('agentDetailId').textContent = id;
+        document.getElementById('agentDetailDID').textContent = did || 'N/A';
+        document.getElementById('agentDetailModelValue').textContent = model;
+        document.getElementById('agentDetailProviderValue').textContent = provider;
+        document.getElementById('agentDetailTx').textContent = tx || 'Not registered';
+        document.getElementById('agentDetailProofs').textContent = proofs;
+        document.getElementById('agentDetailRate').textContent = rate + '%';
+        document.getElementById('agentDetailDescription').textContent = description || 'No description provided.';
+        document.getElementById('agentDetailProvider').innerHTML = '<span>🧠</span> ' + provider;
+        document.getElementById('agentDetailModel').innerHTML = '<span>📦</span> ' + model;
+        document.getElementById('agentDetailStatus').className = 'status-badge active';
+        document.getElementById('agentDetailStatus').innerHTML = '<span class="status-dot active"></span> ' + status;
+    }
+
+    // ============ TOAST NOTIFICATION ============
+    function showToast(type, message) {
+        const container = document.getElementById('toastContainer');
+        
+        // Remove existing toasts
+        const existingToasts = container.querySelectorAll('.toast-custom');
+        existingToasts.forEach(toast => toast.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast-custom ' + type;
+        
+        const icons = {
+            'success': '',
+            'error': '❌',
+            'info': 'ℹ️'
+        };
+        
+        toast.innerHTML = `
+            <span style="font-size: 1.2rem;">${icons[type] || 'ℹ️'}</span>
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()" style="margin-left: auto; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(function() {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOut 0.4s ease forwards';
+                setTimeout(function() {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 400);
+            }
+        }, 4000);
+    }
+
+    // ============ AUTO-DISMISS ALERTS ============
+    document.addEventListener('DOMContentLoaded', function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            setTimeout(function() {
+                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 500);
+            }, 3000);
+        });
+    });
+</script>
+{% endblock %}

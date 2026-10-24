@@ -1,0 +1,833 @@
+{% extends 'base.html' %}
+
+{% block title %}User Settings{% endblock %}
+
+{% block page_title %}Settings{% endblock %}
+{% block page_subtitle %}Manage your profile, preferences, and account settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ============ SETTINGS LAYOUT ============ */
+    .settings-layout {
+        display: flex;
+        gap: 1.5rem;
+    }
+
+    .settings-sidebar {
+        width: 220px;
+        flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 0.8rem;
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+    }
+
+    .settings-sidebar .nav-item {
+        margin-bottom: 0.15rem;
+    }
+
+    .settings-sidebar .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.6rem 0.8rem;
+        border-radius: 10px;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        width: 100%;
+    }
+
+    .settings-sidebar .nav-link:hover {
+        background: rgba(217, 155, 127, 0.08);
+        color: var(--primary-light);
+    }
+
+    .settings-sidebar .nav-link.active {
+        background: linear-gradient(135deg, rgba(165, 111, 99, 0.2), rgba(217, 155, 127, 0.1));
+        color: var(--primary-light);
+        border: 1px solid rgba(217, 155, 127, 0.15);
+    }
+
+    .settings-sidebar .nav-link i {
+        width: 18px;
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    /* ============ SETTINGS CONTENT ============ */
+    .settings-content {
+        flex: 1;
+    }
+
+    .settings-section {
+        display: none;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .settings-section.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .settings-section .section-title {
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .settings-section .section-desc {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* ============ PROFILE SECTION ============ */
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: #0F3040;
+        font-weight: 700;
+        border: 3px solid rgba(217, 155, 127, 0.3);
+        margin: 0 auto 1rem;
+    }
+
+    .profile-avatar-upload {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-avatar-upload .btn-upload {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.4rem 1.2rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .profile-avatar-upload .btn-upload:hover {
+        background: rgba(217, 155, 127, 0.1);
+        border-color: var(--primary-light);
+        color: var(--primary-light);
+    }
+
+    /* ============ FORM CONTROLS ============ */
+    .form-group-custom {
+        margin-bottom: 1.2rem;
+    }
+
+    .form-group-custom label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 0.3rem;
+        display: block;
+    }
+
+    .form-group-custom .form-control {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    .form-group-custom .form-control:focus {
+        border-color: var(--primary-light);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(217, 155, 127, 0.1);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .form-group-custom .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .form-group-custom .form-control option {
+        background: #1a2a3a;
+        color: var(--text-light);
+    }
+
+    .form-group-custom .form-hint {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        margin-top: 0.2rem;
+    }
+
+    /* ============ TOGGLE SWITCH ============ */
+    .toggle-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.8rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .toggle-container:last-child {
+        border-bottom: none;
+    }
+
+    .toggle-container .toggle-info {
+        flex: 1;
+    }
+
+    .toggle-container .toggle-info .label {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .toggle-container .toggle-info .desc {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+    }
+
+    .toggle-switch {
+        width: 50px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex-shrink: 0;
+    }
+
+    .toggle-switch.active {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+    }
+
+    .toggle-switch .toggle-slider {
+        width: 22px;
+        height: 22px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-switch.active .toggle-slider {
+        left: 25px;
+    }
+
+    /* ============ BUTTONS ============ */
+    .btn-save {
+        background: linear-gradient(135deg, var(--primary-warm), var(--primary-light));
+        color: #0F3040;
+        border: none;
+        padding: 0.6rem 1.8rem;
+        border-radius: 10px;
+        font-weight: 700;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(217, 155, 127, 0.2);
+        color: #0F3040;
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        padding: 0.6rem 1.8rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    .btn-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        padding: 0.6rem 1.8rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        transform: translateY(-2px);
+    }
+
+    /* ============ TOAST ============ */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+
+    .toast-custom {
+        background: #1a2a3a;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+        min-width: 300px;
+        animation: slideIn 0.4s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .toast-custom.success {
+        border-left: 4px solid #34d399;
+    }
+
+    .toast-custom.error {
+        border-left: 4px solid #f87171;
+    }
+
+    .toast-custom.info {
+        border-left: 4px solid #60a5fa;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 768px) {
+        .settings-layout {
+            flex-direction: column;
+        }
+
+        .settings-sidebar {
+            width: 100%;
+            position: static;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            padding: 0.5rem;
+        }
+
+        .settings-sidebar .nav-item {
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .settings-sidebar .nav-link {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.6rem;
+            justify-content: center;
+        }
+
+        .settings-section {
+            padding: 1rem;
+        }
+
+        .toggle-container {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="settings-layout">
+    <!-- ====== SETTINGS SIDEBAR ====== -->
+    <div class="settings-sidebar">
+        <div class="nav-item">
+            <button class="nav-link active" data-section="profile" onclick="showSection('profile')">
+                <i class="fas fa-user"></i> Profile
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-section="security" onclick="showSection('security')">
+                <i class="fas fa-shield-alt"></i> Security
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-section="preferences" onclick="showSection('preferences')">
+                <i class="fas fa-sliders-h"></i> Preferences
+            </button>
+        </div>
+        <div class="nav-item">
+            <button class="nav-link" data-section="notifications" onclick="showSection('notifications')">
+                <i class="fas fa-bell"></i> Notifications
+            </button>
+        </div>
+        <div class="nav-item" style="margin-top: 0.5rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+            <button class="nav-link" data-section="danger" onclick="showSection('danger')" style="color: #f87171;">
+                <i class="fas fa-exclamation-triangle"></i> Danger Zone
+            </button>
+        </div>
+    </div>
+
+    <!-- ====== SETTINGS CONTENT ====== -->
+    <div class="settings-content">
+
+        <!-- ============================================ -->
+        <!-- PROFILE SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section active" id="section-profile">
+            <h4 class="section-title"><i class="fas fa-user me-2" style="color: var(--primary-light);"></i>Profile Settings</h4>
+            <p class="section-desc">Update your personal information and profile picture</p>
+
+            <form id="profileForm">
+                <div class="profile-avatar-upload">
+                    <div class="profile-avatar">
+                        {{ request.session.username|slice:":1"|upper }}
+                    </div>
+                    <button type="button" class="btn-upload" onclick="uploadAvatar()">
+                        <i class="fas fa-camera me-2"></i> Change Avatar
+                    </button>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group-custom">
+                            <label><i class="fas fa-user me-1"></i> Username</label>
+                            <input type="text" class="form-control" value="{{ request.session.username }}" placeholder="Username">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group-custom">
+                            <label><i class="fas fa-envelope me-1"></i> Email</label>
+                            <input type="email" class="form-control" value="user@example.com" placeholder="Email address">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label><i class="fas fa-align-left me-1"></i> Bio</label>
+                    <textarea class="form-control" rows="3" placeholder="Tell us about yourself...">AI enthusiast and SecureAI platform user</textarea>
+                </div>
+
+                <div style="margin-top: 1rem; display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                    <button type="button" class="btn-save" onclick="saveSettings('Profile')">
+                        <i class="fas fa-save"></i> Save Profile
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="resetForm('profileForm')">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SECURITY SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-security">
+            <h4 class="section-title"><i class="fas fa-shield-alt me-2" style="color: var(--primary-light);"></i>Security Settings</h4>
+            <p class="section-desc">Manage your password and security preferences</p>
+
+            <form id="securityForm">
+                <div class="form-group-custom">
+                    <label><i class="fas fa-lock me-1"></i> Current Password</label>
+                    <input type="password" class="form-control" placeholder="Enter your current password">
+                </div>
+                <div class="form-group-custom">
+                    <label><i class="fas fa-lock me-1"></i> New Password</label>
+                    <input type="password" class="form-control" placeholder="Enter new password (min 8 characters)">
+                    <div class="form-hint">Must contain uppercase, lowercase, and number</div>
+                </div>
+                <div class="form-group-custom">
+                    <label><i class="fas fa-check-circle me-1"></i> Confirm New Password</label>
+                    <input type="password" class="form-control" placeholder="Confirm your new password">
+                </div>
+
+                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                    <div class="toggle-container">
+                        <div class="toggle-info">
+                            <div class="label">Two-Factor Authentication</div>
+                            <div class="desc">Add an extra layer of security to your account</div>
+                        </div>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="toggle-container">
+                        <div class="toggle-info">
+                            <div class="label">Login Alerts</div>
+                            <div class="desc">Get notified when a new device logs into your account</div>
+                        </div>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                    <button type="button" class="btn-save" onclick="saveSettings('Security')">
+                        <i class="fas fa-save"></i> Update Password
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- PREFERENCES SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-preferences">
+            <h4 class="section-title"><i class="fas fa-sliders-h me-2" style="color: var(--primary-light);"></i>Preferences</h4>
+            <p class="section-desc">Customize your platform experience</p>
+
+            <form id="preferencesForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group-custom">
+                            <label><i class="fas fa-globe me-1"></i> Language</label>
+                            <select class="form-control">
+                                <option value="en" selected>🇺🇸 English</option>
+                                <option value="es">🇪🇸 Spanish</option>
+                                <option value="fr">🇫🇷 French</option>
+                                <option value="de">🇩🇪 German</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group-custom">
+                            <label><i class="fas fa-calendar-alt me-1"></i> Date Format</label>
+                            <select class="form-control">
+                                <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                                <option value="dd/mm/yyyy" selected>DD/MM/YYYY</option>
+                                <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                    <div class="toggle-container">
+                        <div class="toggle-info">
+                            <div class="label">Dark Mode</div>
+                            <div class="desc">Enable dark theme for the platform</div>
+                        </div>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="toggle-container">
+                        <div class="toggle-info">
+                            <div class="label">Auto-Save Queries</div>
+                            <div class="desc">Automatically save your query history</div>
+                        </div>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                    <div class="toggle-container">
+                        <div class="toggle-info">
+                            <div class="label">Proof Verification Alerts</div>
+                            <div class="desc">Get notified when proofs are verified</div>
+                        </div>
+                        <div class="toggle-switch" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <button type="button" class="btn-save" onclick="saveSettings('Preferences')">
+                        <i class="fas fa-save"></i> Save Preferences
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- NOTIFICATIONS SETTINGS -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-notifications">
+            <h4 class="section-title"><i class="fas fa-bell me-2" style="color: var(--primary-light);"></i>Notification Settings</h4>
+            <p class="section-desc">Manage your notification preferences</p>
+
+            <form id="notificationsForm">
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Email Notifications</div>
+                        <div class="desc">Receive notifications via email</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Proof Verification Status</div>
+                        <div class="desc">Get notified when your proofs are verified</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">Agent Updates</div>
+                        <div class="desc">Receive updates about new AI agents</div>
+                    </div>
+                    <div class="toggle-switch" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <div class="label">System Maintenance</div>
+                        <div class="desc">Get notified about system maintenance</div>
+                    </div>
+                    <div class="toggle-switch active" onclick="toggleSwitch(this)">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="form-group-custom" style="margin-top: 1rem;">
+                    <label><i class="fas fa-envelope me-1"></i> Notification Email</label>
+                    <input type="email" class="form-control" value="user@example.com" placeholder="Email for notifications">
+                    <div class="form-hint">All notifications will be sent to this email</div>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <button type="button" class="btn-save" onclick="saveSettings('Notifications')">
+                        <i class="fas fa-save"></i> Save Notifications
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DANGER ZONE -->
+        <!-- ============================================ -->
+        <div class="settings-section" id="section-danger">
+            <h4 class="section-title" style="color: #f87171;"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h4>
+            <p class="section-desc">Irreversible actions - Proceed with extreme caution</p>
+
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="font-weight: 700; color: #f87171;">Delete Account</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem;">This will permanently delete your account and all associated data.</div>
+                    </div>
+                    <button type="button" class="btn-danger" onclick="deleteAccount()">
+                        <i class="fas fa-user-times me-2"></i> Delete Account
+                    </button>
+                </div>
+            </div>
+
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 1.5rem; margin-top: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="font-weight: 700; color: #f87171;">Clear All Data</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem;">Remove all your query history and saved preferences.</div>
+                    </div>
+                    <button type="button" class="btn-danger" onclick="clearData()">
+                        <i class="fas fa-trash me-2"></i> Clear Data
+                    </button>
+                </div>
+            </div>
+
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 1.5rem; margin-top: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="font-weight: 700; color: #f87171;">Logout All Devices</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem;">Sign out from all active sessions on all devices.</div>
+                    </div>
+                    <button type="button" class="btn-danger" onclick="logoutAllDevices()">
+                        <i class="fas fa-sign-out-alt me-2"></i> Logout All
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.1); border-radius: 12px;">
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    <i class="fas fa-info-circle" style="color: #fbbf24; font-size: 1.2rem;"></i>
+                    <div style="color: var(--text-muted); font-size: 0.85rem;">
+                        <strong style="color: #fbbf24;">⚠️ Warning:</strong> These actions are irreversible. Please make sure you want to proceed before clicking.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ====== TOAST CONTAINER ====== -->
+<!-- ============================================================ -->
+<div class="toast-container" id="toastContainer"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ============ SHOW/HIDE SECTIONS ============
+    function showSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.settings-section').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        
+        // Show selected section
+        document.getElementById('section-' + sectionId).classList.add('active');
+        
+        // Update sidebar active state
+        document.querySelectorAll('.settings-sidebar .nav-link').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        document.querySelector('.settings-sidebar .nav-link[data-section="' + sectionId + '"]').classList.add('active');
+    }
+
+    // ============ TOGGLE SWITCH ============
+    function toggleSwitch(element) {
+        element.classList.toggle('active');
+        const label = element.closest('.toggle-container').querySelector('.label').textContent;
+        const status = element.classList.contains('active') ? 'enabled' : 'disabled';
+        showToast('info', '🔄 ' + label + ' ' + status);
+    }
+
+    // ============ SAVE SETTINGS ============
+    function saveSettings(section) {
+        showToast('info', '💾 Saving ' + section + ' settings...');
+        setTimeout(function() {
+            showToast('success', ' ' + section + ' settings saved successfully!');
+        }, 1500);
+    }
+
+    // ============ RESET FORM ============
+    function resetForm(formId) {
+        document.getElementById(formId).reset();
+        showToast('info', '🔄 Form reset to default values');
+    }
+
+    // ============ UPLOAD AVATAR ============
+    function uploadAvatar() {
+        showToast('info', '📷 Opening file picker...');
+        setTimeout(function() {
+            showToast('success', ' Avatar updated successfully!');
+        }, 1500);
+    }
+
+    // ============ DANGER ZONE FUNCTIONS ============
+    function deleteAccount() {
+        if (confirm('⚠️ WARNING: This will permanently delete your account! Are you sure?')) {
+            if (confirm('🔴 FINAL WARNING: This action cannot be undone! Type "DELETE" to confirm.')) {
+                showToast('error', '🗑️ Account deleted successfully! (mock)');
+            }
+        }
+    }
+
+    function clearData() {
+        if (confirm('⚠️ Clear all your data? This cannot be undone.')) {
+            showToast('error', '🗑️ All data cleared successfully! (mock)');
+        }
+    }
+
+    function logoutAllDevices() {
+        if (confirm('⚠️ Logout from all devices?')) {
+            showToast('info', '🔄 Logging out from all devices...');
+            setTimeout(function() {
+                showToast('success', ' Logged out from all devices!');
+            }, 1500);
+        }
+    }
+
+    // ============ TOAST NOTIFICATION ============
+    function showToast(type, message) {
+        const container = document.getElementById('toastContainer');
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast-custom ' + type;
+        
+        const icons = {
+            'success': '',
+            'error': '❌',
+            'info': 'ℹ️'
+        };
+        
+        toast.innerHTML = `
+            <span style="font-size: 1.2rem;">${icons[type] || 'ℹ️'}</span>
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()" style="margin-left: auto; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(function() {
+            toast.style.animation = 'slideOut 0.4s ease forwards';
+            setTimeout(function() {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 400);
+        }, 4000);
+    }
+
+    // ============ AUTO-DISMISS ALERTS ============
+    document.addEventListener('DOMContentLoaded', function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            setTimeout(function() {
+                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 500);
+            }, 3000);
+        });
+    });
+</script>
+{% endblock %}

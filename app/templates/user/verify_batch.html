@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Batch{% endblock %}
+{% block page_title %}Batch Verification{% endblock %}
+{% block page_subtitle %}Recomputed Merkle root vs. on-chain anchored root{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px;">
+
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem;">
+        <h4 style="font-weight: 700; margin-bottom: 1rem;">
+            <i class="fas fa-cube me-2"></i>{{ result.batch_id }}
+        </h4>
+
+        {% if result.error %}
+            <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem;">
+                <div style="color: #f87171; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                    <i class="fas fa-times-circle me-2"></i>MISMATCH — verification failed
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.9rem;">{{ result.error }}</div>
+            </div>
+        {% elif result.match %}
+            <div style="background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem;">
+                <div style="color: #34d399; font-weight: 700; font-size: 1.1rem;">
+                    <i class="fas fa-check-circle me-2"></i>MATCH — proofs are untampered
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem;">
+                    The Merkle root recomputed from the current database exactly matches the root anchored on-chain.
+                </div>
+            </div>
+        {% else %}
+            <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem;">
+                <div style="color: #f87171; font-weight: 700; font-size: 1.1rem;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>MISMATCH — tampering detected
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem;">
+                    The recomputed root does NOT match the on-chain root. One or more proofs in this batch have been altered since anchoring.
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="detail-row"><span class="label">Stored (on-chain) root</span><span class="value mono">{{ result.stored_merkle_root|default:"—" }}</span></div>
+        <div class="detail-row"><span class="label">Recomputed root (now)</span><span class="value mono">{{ result.recomputed_merkle_root|default:"—" }}</span></div>
+        <div class="detail-row"><span class="label">Proofs expected / found</span><span class="value">{{ result.proof_count_expected }} / {{ result.proof_count_found }}</span></div>
+        <div class="detail-row"><span class="label">Transaction hash</span><span class="value mono">{{ result.tx_hash|default:"Not anchored" }}</span></div>
+        <div class="detail-row"><span class="label">Block number</span><span class="value">{{ result.block_number|default:"—" }}</span></div>
+        <div class="detail-row" style="border-bottom: none;"><span class="label">Batch status</span><span class="value">{{ result.status|title }}</span></div>
+    </div>
+
+    {% if result.per_proof_signatures %}
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem;">
+        <h5 style="font-weight: 700; margin-bottom: 1rem;">Proofs in this batch</h5>
+        {% for p in result.per_proof_signatures %}
+        <div class="detail-row">
+            <span class="label">{{ p.proof_id }}</span>
+            <span class="value mono" style="font-size: 0.75rem;">{{ p.signature_preview }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
