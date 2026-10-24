@@ -1,0 +1,118 @@
+Creating test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+
+Found 15 test(s).
+Operations to perform:
+  Synchronize unmigrated apps: messages, staticfiles
+  Apply all migrations: admin, app, auth, contenttypes, sessions
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying app.0001_initial... OK
+  Applying app.0002_alter_agent_llm_provider... OK
+  Applying app.0003_remove_blockchaintransaction_related_agent_and_more... OK
+  Applying app.0004_attacklog_agentreputation_governancecontract... OK
+  Applying app.0005_pocaproof_attestation_timestamp... OK
+  Applying app.0006_processedrequest... OK
+  Applying app.0007_pocaproof_accepted_at... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying sessions.0001_initial...test_different_request_ids_are_allowed (app.tests.ProcessedRequestTests) ... ok
+test_duplicate_request_id_is_rejected (app.tests.ProcessedRequestTests) ... ok
+test_request_id_is_saved_in_database (app.tests.ProcessedRequestTests) ... ok
+test_01_failed_anchor_releases_proofs (app.tests.R25FailureRecoveryTests)
+Failed anchoring must release all reserved proofs. ... ok
+test_02_retry_after_failure_succeeds (app.tests.R25FailureRecoveryTests)
+Released proofs should anchor after blockchain recovery. ... ok
+test_03_repeated_failures_do_not_duplicate_anchor (app.tests.R25FailureRecoveryTests)
+Repeated failures followed by recovery must not double-anchor. ... ok
+test_invalid_signature_is_rejected_before_anchoring (app.tests.BatchSignatureValidationTests) ... Traceback (most recent call last):
+  File "Z:\k vengababu\Kavya\=========kranthi=========\FINAL PAPER SCOPUS PAPER PHASE1\paper-changes by venga\poca-mithril-github1\app\batch_processor.py", line 643, in anchor_batch
+    raise ValueError(
+ValueError: Invalid PoCA signature detected before anchoring: TEST-PROOF-001
+ok
+test_canonical_message_matches_expected_bytes (app.tests.CanonicalPoCATestVectorTests) ... ok
+test_forged_agent_did_is_rejected (app.tests.CanonicalPoCATestVectorTests) ... ok
+test_forged_registered_model_hash_is_rejected (app.tests.CanonicalPoCATestVectorTests) ... ok
+test_modified_signed_field_invalidates_signature (app.tests.CanonicalPoCATestVectorTests) ... ok
+test_signature_verifies_for_canonical_message (app.tests.CanonicalPoCATestVectorTests) ... ok
+test_concurrent_duplicate_requests (app.tests.R12ReplayConcurrencyTests) ... ok
+test_two_verifiers_share_processed_ids (app.tests.R12ReplayConcurrencyTests) ... ok
+test_invalid_signature_is_rejected_before_anchoring (app.tests.SingleProofSignatureValidationTests) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.274s
+
+OK
+Destroying test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+
+ OK
+System check identified no issues (0 silenced).
+Mithril batch reserved: BATCH-4ad15458638b (5 proofs)
+Batch BATCH-4ad15458638b failure reason: Blockchain anchoring returned failure
+Mithril batch reserved: BATCH-b7c87412784b (5 proofs)
+Batch BATCH-b7c87412784b failure reason: Blockchain anchoring returned failure
+Mithril batch reserved: BATCH-112d37355926 (5 proofs)
+Mithril batch reserved: BATCH-9838d4f78a39 (5 proofs)
+Batch BATCH-9838d4f78a39 failure reason: Blockchain anchoring returned failure
+Mithril batch reserved: BATCH-6bcb8ef093fc (5 proofs)
+Batch BATCH-6bcb8ef093fc failure reason: Blockchain anchoring returned failure
+Mithril batch reserved: BATCH-4fb001fce1ef (5 proofs)
+Batch BATCH-4fb001fce1ef failure reason: Blockchain anchoring returned failure
+Mithril batch reserved: BATCH-8eed590d922e (5 proofs)
+Error anchoring batch TEST-BATCH-001: Invalid PoCA signature detected before anchoring: TEST-PROOF-001
+
+========== R1.1 TEST VECTOR ==========
+Canonical JSON:
+{"agent_did":"did:secureai:test123","context_hash":"sha256:abc123","model_hash":"sha256:def456","proof_id":"RESP-0001","safety_score":"0.87","timestamp":"2026-10-09T12:30:00+00:00","version":1}
+
+UTF-8 Hex:
+7b226167656e745f646964223a226469643a73656375726561693a74657374313233222c22636f6e746578745f68617368223a227368613235363a616263313233222c226d6f64656c5f68617368223a227368613235363a646566343536222c2270726f6f665f6964223a22524553502d30303031222c227361666574795f73636f7265223a22302e3837222c2274696d657374616d70223a22323032362d31302d30395431323a33303a30302b30303a3030222c2276657273696f6e223a317d
+
+======================================
+R1.1 Forged DID: REJECTED
+R1.1 Forged registered model hash: REJECTED
+
+========== FINAL R1.1 SIGNED TEST VECTOR ==========
+
+Canonical JSON:
+{"agent_did":"did:secureai:af533e027d9d6ccc0958c470c26ea9d9","context_hash":"sha256:abc123","model_hash":"sha256:def456","proof_id":"RESP-0001","safety_score":"0.87","timestamp":"2026-10-09T12:30:00+00:00","version":1}
+
+UTF-8 Hex:
+7b226167656e745f646964223a226469643a73656375726561693a6166353333653032376439643663636330393538633437306332366561396439222c22636f6e746578745f68617368223a227368613235363a616263313233222c226d6f64656c5f68617368223a227368613235363a646566343536222c2270726f6f665f6964223a22524553502d30303031222c227361666574795f73636f7265223a22302e3837222c2274696d657374616d70223a22323032362d31302d30395431323a33303a30302b30303a3030222c2276657273696f6e223a317d
+
+Registered DID:
+did:secureai:af533e027d9d6ccc0958c470c26ea9d9
+
+Public Key:
+79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+
+Signature:
+ccdfa7b470f0150d909e0c6316c90ad8964774a2d9504db0bcdaaeb5bd739cc61d54a1280d40363c3fcc176d2bc52ada9e45153f1c5a890438b71755bf43aca0
+
+Registered Model Hash:
+sha256:def456
+
+Proof Model Hash:
+sha256:def456
+
+Model Hash Match:
+True
+
+===================================================
+Concurrent Results: ['DATABASE_LOCKED', 'DATABASE_LOCKED', 'ACCEPTED', 'DUPLICATE_REJECTED', 'DATABASE_LOCKED']
