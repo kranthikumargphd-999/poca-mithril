@@ -36,7 +36,7 @@ class BatchSignatureValidationTests(SimpleTestCase):
     @patch("app.batch_processor.Agent.objects.filter")
     @patch("app.batch_processor.PoCAProof.objects.filter")
     @patch(
-        "app.batch_processor.verify_poca_signature_onchain",
+        "app.batch_processor.verify_poca_signature_with_registry",
         return_value=False,
     )
     def test_invalid_signature_is_rejected_before_anchoring(
@@ -73,10 +73,11 @@ class BatchSignatureValidationTests(SimpleTestCase):
             num_proofs=1,
         )
 
-        result = MithrilBatchProcessor.anchor_batch(batch)
+        with patch("app.batch_processor.retrieveData", return_value=[]):
+            result = MithrilBatchProcessor.anchor_batch(batch)
 
         self.assertEqual(result, (False, None, None, None))
-        mock_verify_signature.assert_called_once_with(proof)
+        mock_verify_signature.assert_called_once_with(proof, [])
         mock_add_new_data.assert_not_called()
 
 
@@ -494,6 +495,7 @@ class R25FailureRecoveryTests(TestCase):
                 safety_score=0.90,
                 attestation_timestamp=timezone.now(),
                 signature=f"test-signature-{i+1}",
+                accepted_at=timezone.now(),
                 is_batched=False,
             )
             self.proofs.append(proof)
@@ -503,7 +505,11 @@ class R25FailureRecoveryTests(TestCase):
         # not on cryptographic correctness.
         patchers = [
             patch(
-                "app.batch_processor.verify_poca_signature_onchain",
+                "app.batch_processor.retrieveData",
+                return_value=[],
+            ),
+            patch(
+                "app.batch_processor.verify_poca_signature_with_registry",
                 return_value=True,
             ),
             patch(
